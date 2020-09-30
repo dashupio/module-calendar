@@ -1,0 +1,182 @@
+<calendar-month>
+  <div class="calendar-day">
+    <div class="calendar-table">
+      <table class="table table-bordered table-striped table-fixed calendar-table-month vh-75">
+        <thead>
+          <tr>
+            <th each={ (day, i) in state.days }>
+              { day }
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr each={ (week, i) in state.weeks }>
+            <td each={ (day, a) in week } class={ `${day.disable ? 'bg-disabled' : ''} ${isToday(day.date) ? 'bg-active' : ''}` }>
+              <div class="day-number"><span>{ day.number }</span></div>
+
+              <calendar-month-row each={ (item, i) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } item={ item } page={ props.page } date={ props.date } start={ day.date } end={ moment(day.date).add(1, 'days').toDate() } on-item={ props.onItem } />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // require base class
+    import Base from '../js/base';
+    import moment from 'moment';
+    import PerfectScrollbar from 'perfect-scrollbar';
+
+    // export default
+    export default class CalendarMonth extends Base {
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // run super
+        super.onBeforeMount(...args);
+
+        // set state elements
+        this.date = new Date();
+        this.moment = moment;
+        this.state.days = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        ];
+        this.state.weeks = this.getDays();
+
+        // next/prev
+        this.title = this.title.bind(this);
+      }
+
+      /**
+       * on mounted
+       */
+      onBeforeUpdate(...args) {
+        // run super
+        super.onBeforeUpdate(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+        
+        // set day
+        this.date = this.props.date || new Date();
+        this.state.weeks = this.getDays();
+      }
+
+      /**
+       * on mounted
+       */
+      onMounted(...args) {
+        // run super
+        super.onMounted(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // setup
+        this.setup();
+      }
+
+      /**
+       * on updated
+       */
+      onUpdated(...args) {
+        // run super
+        super.onUpdated(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // setup
+        this.setup();
+      }
+
+      /**
+       * get days
+       */
+      getDays() {
+        // get days in month
+        const days = [];
+        const inMonth = moment(this.date).daysInMonth();
+
+        // shift
+        for (let i = 1; i <= inMonth; i++) {
+          // add day
+          days.push({
+            day    : moment(`${this.date.getFullYear()}-${this.date.getMonth() + 1}-${i}`).format('dddd'),
+            date   : moment(`${this.date.getFullYear()}-${this.date.getMonth() + 1}-${i}`).toDate(),
+            number : i,
+          });
+        }
+
+        // add days as disabled before SOM
+        while (days[0].day.toLowerCase() !== 'monday') {
+          // get previous day
+          const prev = moment(days[0].date).subtract(1, 'day');
+
+          // unshift days
+          days.unshift({
+            day     : prev.format('dddd'),
+            date    : prev.toDate(),
+            number  : prev.toDate().getDate(),
+            disable : true,
+          });
+        }
+
+        // add days as disabled after EOM
+        while (days[days.length - 1].day.toLowerCase() !== 'sunday') {
+          // get previous day
+          const next = moment(days[days.length - 1].date).add(1, 'day');
+
+          // unshift days
+          days.push({
+            day     : next.format('dddd'),
+            date    : next.toDate(),
+            number  : next.toDate().getDate(),
+            disable : true,
+          });
+        }
+
+        // chunk into weeks
+        const weeks = Array(Math.ceil(days.length / 7)).fill().map((_, i) => {
+          // set weeks
+          return days.slice(i * 7, i * 7 + 7);
+        });
+        
+        // return weeks
+        return weeks;
+      }
+
+      /**
+       * check is today
+       */
+      isToday(date) {
+        // check day
+        return moment().format('YYYY-MM-DD') === moment(date).format('YYYY-MM-DD');
+      }
+
+      /**
+       * setup
+       */
+      setup() {
+        // check frontend
+        if (!this.eden.frontend) return;
+      }
+
+      /**
+       * sets title
+       */
+      title() {
+        // return title
+        return moment(this.date || new Date()).format('MMMM YYYY');
+      }
+    }
+  </script>
+</calendar-month>

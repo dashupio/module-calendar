@@ -1,0 +1,73 @@
+<dashup-filter-calendar>
+  <dashup-filter-base fields={ state.fields } on-search={ (e) => onSearch(e) } has-user={ true } has-tag={ true } { ...getProps() } />
+
+  <script>
+    // require base class
+    import Base from '../../js/base';
+
+    // export default
+    export default class DashupFilterCalendar extends Base {
+      
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // run super
+        super.onBeforeMount(...args);
+
+        // bind
+        this.onSearch = this.onSearch.bind(this);
+      }
+      
+      /**
+       * on before mount
+       */
+      onMounted(...args) {
+        // run super
+        super.onMounted(...args);
+        
+        // get fields
+        this.init();
+      }
+
+      /**
+       * on search
+       */
+      onSearch(e, target) {
+        // search
+        this.props.update('search', (target || e.target).value);
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // create object
+        const newProps = Object.assign({}, this.props);
+
+        // delete fields
+        delete newProps.is;
+
+        // return new props
+        return newProps;
+      }
+
+      /**
+       * init fields
+       */
+      async init() {
+        // check forms
+        if (!this.props.page.get('data.forms.0.id')) return;
+
+        // load fields
+        const res = await fetch(`/app/${eden.get('dashup').get('_id')}/form/${this.props.page.get('data.forms.0.id')}/fields`);
+        const fields = await res.json();
+
+        // update fields
+        this.update({
+          fields,
+        });
+      }
+    }
+  </script>
+</dashup-filter-calendar>

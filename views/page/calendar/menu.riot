@@ -1,0 +1,113 @@
+<dashup-nav-calendar>
+  <div>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'day'}) } onclick={ (e) => props.update('calendar', 'day') }>
+      Day
+    </button>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'week'}) } onclick={ (e) => props.update('calendar', 'week') }>
+      Week
+    </button>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : !props.calendar || props.calendar === 'month'}) } onclick={ (e) => props.update('calendar', 'month') }>
+      Month
+    </button>
+
+    <div class="ml-2 border-left pl-2 d-inline-block">
+      <button class={ classes({ 'btn btn-primary' : true, 'disabled' : isToday(props.date || new Date()) }) } onclick={ (e) => onToday(e) }>
+        Today
+      </button>
+
+      <div class="btn-group ml-2">
+        <button class="btn btn-primary" onclick={ (e) => onPrev(e) }>
+          <i class="fa fa-chevron-left" />
+        </button>
+        <button class="btn btn-primary" onclick={ (e) => onNext(e) }>
+          <i class="fa fa-chevron-right" />
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // require base class
+    import Base from '../../js/base';
+    import moment from 'moment';
+
+    // export default
+    export default class DashupNavCalendar extends Base {
+      
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // run super
+        super.onBeforeMount(...args);
+        
+      }
+
+      /**
+       * on prev
+       */
+      onToday(e) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // set date
+        this.props.update('date', new Date());
+      }
+
+      /**
+       * on prev
+       */
+      onPrev(e) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // check date
+        if (!this.props.calendar || this.props.calendar === 'month') {
+          // add one month
+          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'month').toDate());
+        }
+        if (this.props.calendar === 'week') {
+          // add one month
+          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'week').toDate());
+        }
+        if (this.props.calendar === 'day') {
+          // add one month
+          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'day').toDate());
+        }
+      }
+
+      /**
+       * on prev
+       */
+      onNext(e) {
+        // prevent
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // check date
+        if (!this.props.calendar || this.props.calendar === 'month') {
+          // add one month
+          return this.props.update('date', moment(this.props.date || new Date()).add(1, 'month').toDate());
+        }
+        if (this.props.calendar === 'week') {
+          // add one month
+          return this.props.update('date', moment(this.props.date || new Date()).add(1, 'week').toDate());
+        }
+        if (this.props.calendar === 'day') {
+          // add one month
+          this.props.update('date', moment(this.props.date || new Date()).add(1, 'day').toDate());
+        }
+      }
+
+      /**
+       * check is today
+       */
+      isToday(date) {
+        // check day
+        return moment().format('YYYY-MM-DD') === moment(date).format('YYYY-MM-DD');
+      }
+    }
+  </script>
+</dashup-nav-calendar>

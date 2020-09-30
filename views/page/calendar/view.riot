@@ -1,0 +1,184 @@
+<dashup-page-calendar>
+  <div>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.model.id') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select a <b>model</b> for the calendar.
+    </a>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.form.id') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select a <b>form</b> for the calendar.
+    </a>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.start.uuid') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select a <b>start field</b> for the calendar.
+    </a>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.end.uuid') } onclick={ (e) => props.onConfig(e) }>
+      <i class="fa fa-exclamation-triangle mr-2" />
+      Please select a <b>end field</b> for the calendar.
+    </a>
+
+    <div if={ !loading('calendar') }>
+      <calendar-day if={ props.calendar === 'day' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
+      <calendar-week if={ props.calendar === 'week' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
+      <calendar-month if={ !props.calendar || props.calendar === 'month' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
+    </div>
+    <div if={ loading('calendar') } class="text-center my-5 py-5">
+      <i class="fa fa-spin fa-spinner h1" />
+    </div>
+  </div>
+
+  <script>
+    // require base class
+    import Base from '../../js/base';
+    import moment from 'moment';
+
+    // export default
+    export default class DashupPageGrid extends Base {
+
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // on before mount
+        super.onBeforeMount(...args);
+
+        // bind init
+        this.init = this.init.bind(this);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // listeners
+        this.props.page.on('data.form', this.init);
+        this.props.page.on('data.model', this.init);
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeUpdate(...args) {
+        // on before mount
+        super.onBeforeUpdate(...args);
+
+      }
+
+      /**
+       * on before mount
+       */
+      onBeforeUnmount(...args) {
+        // on before mount
+        super.onBeforeUnmount(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // listeners
+        this.props.page.removeListener('data.form', this.init);
+        this.props.page.removeListener('data.model', this.init);
+      }
+
+      /**
+       * on mounted
+       */
+      onMounted(...args) {
+        // run super
+        super.onMounted(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // init
+        this.init();
+      }
+
+      /**
+       * init
+       */
+      async init() {
+        // loading
+        this.loading('calendar', true);
+
+        // check model
+        if (!this.props.page.get('data.model.id')) {
+          // unloading
+          return this.loading('calendar', false);
+        }
+
+        // kill listeners
+        if (this.state.ended || this.state.started) {
+          // @todo kill
+          this.state.ended.removeListener('update', this.safeUpdate);
+          this.state.started.removeListener('update', this.safeUpdate);
+        }
+
+        // starts and ends
+        const end = moment(this.props.date || new Date()).add(1, 'month').toDate();
+        const start = moment(this.props.date || new Date()).startOf('day').toDate();
+
+        // keys
+        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
+        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
+
+        // load items
+        this.update({
+          ended : await this.eden.get('dashup').page(this.props.page.get('data.model.id')).gt(endKey, end).listen(),
+          started : await this.eden.get('dashup').page(this.props.page.get('data.model.id')).gt(startKey, start).listen(),
+        });
+      
+        // listeners
+        this.state.ended.on('update', this.safeUpdate);
+        this.state.started.on('update', this.safeUpdate);
+
+        // loading
+        this.loading('calendar', false);
+      }
+
+      /**
+       * get items
+       *
+       * @param {String} col
+       */
+      getItems(start, end) {
+        // check frontend
+        if (!this.eden.frontend) return [];
+
+        // keys
+        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
+        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
+
+        // get items
+        const items = [...(this.state.started || []), ...(this.state.ended || [])].reduce((accum, item) => {
+          // push
+          if (!accum.find((sub) => sub.get('_id') === item.get('_id'))) accum.push(item);
+
+          // return accumulator
+          return accum;
+        }, []);
+
+        // return queries
+        return items.filter((row) => {
+          // get values
+          const rowEnd = new Date(row.get(endKey) || 0);
+          const rowStart = new Date(row.get(startKey) || 0);
+
+          // check ends within or starts within
+          if (start < rowStart && end > rowStart) {
+            return true;
+          }
+          if (end > rowEnd && start < rowEnd) {
+            return true;
+          }
+        }).sort((a, b) => {
+          // sort order
+          const aC = new Date(a.get(startKey) || 0);
+          const bC = new Date(b.get(startKey) || 0);
+
+          // check order
+          if (bC > aC) return -1;
+          if (bC < aC) return 1;
+          return 0;
+        });
+      }
+    }
+  </script>
+</dashup-page-calendar>

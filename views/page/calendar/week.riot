@@ -1,0 +1,207 @@
+<calendar-week>
+  <div class="calendar-day">
+    <div class="calendar-table">
+      <table class="table table-bordered table-striped table-fixed calendar-table-top">
+        <thead>
+          <tr>
+            <th>
+            </th>
+            <th each={ (day, i) in state.days }>
+              { day }
+              <span class="float-right">
+                { getTextDate(day) }
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th>
+              All Day
+            </th>
+            <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day) }) }>
+
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="calendar-table-bottom">
+        <table class="table table-bordered table-striped table-fixed">
+          <tbody>
+            <tr each={ (hour, i) in state.hours }>
+              <th>
+                { hour[1].toString() }{ hour[0] > 11 ? 'pm' : 'am' }
+              </th>
+              <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day) }) }>
+                
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // require base class
+    import Base from '../js/base';
+    import moment from 'moment';
+    import PerfectScrollbar from 'perfect-scrollbar';
+
+    // export default
+    export default class CalendarWeek extends Base {
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // run super
+        super.onBeforeMount(...args);
+
+        // set state elements
+        this.state.days = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday'
+        ];
+        this.state.hours = [
+          [0, 12],
+          [1, 1],
+          [2, 2],
+          [3, 3],
+          [4, 4],
+          [5, 5],
+          [6, 6],
+          [7, 7],
+          [8, 8],
+          [9, 9],
+          [10, 10],
+          [11, 11],
+          [12, 12],
+          [13, 1],
+          [14, 2],
+          [15, 3],
+          [16, 4],
+          [17, 5],
+          [18, 6],
+          [19, 7],
+          [20, 8],
+          [21, 9],
+          [22, 10],
+          [23, 11],
+        ];
+
+        // next/prev
+        this.title = this.title.bind(this);
+      }
+
+      /**
+       * on mounted
+       */
+      onBeforeUpdate(...args) {
+        // run super
+        super.onBeforeUpdate(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+        
+        // set day
+        this.date = this.props.date || new Date();
+      }
+
+      /**
+       * on mounted
+       */
+      onMounted(...args) {
+        // run super
+        super.onMounted(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // setup ps
+        this.ps = this.ps || new PerfectScrollbar(this.$('.calendar-table-bottom'));
+
+        // setup
+        this.setup();
+      }
+
+      /**
+       * on updated
+       */
+      onUpdated(...args) {
+        // run super
+        super.onUpdated(...args);
+
+        // check frontend
+        if (!this.eden.frontend) return;
+
+        // setup
+        this.setup();
+      }
+
+      /**
+       * check is today
+       */
+      isToday(day) {
+        // check day
+        return moment().format('dddd').toLowerCase() === day.toLowerCase();
+      }
+
+      /**
+       * setup
+       */
+      setup() {
+        // check frontend
+        if (!this.eden.frontend) return;
+      }
+
+      /**
+       * get text date
+       */
+      getTextDate(day) {
+        // get day date
+        const date = this.getDayDate(day);
+
+        // return moment date
+        return moment(date).format('Do MMM');
+      }
+
+      /**
+       * get day date
+       */
+      getDayDate(day) {
+        // days
+        const days = this.state.days.map((d) => d.toLowerCase());
+
+        // check date
+        const id      = days.indexOf(day.toLowerCase());
+        const current = days.indexOf(moment(this.date).format('dddd').toLowerCase());
+
+        // actual date
+        const actualDate = moment(this.date);
+
+        // check if subtract or add
+        if (id > current) {
+          actualDate.add(id - current, 'day');
+        } else if (id < current) {
+          actualDate.subtract(current - id, 'day');
+        }
+
+        // return actual date
+        return actualDate.toDate();
+      }
+
+      /**
+       * sets title
+       */
+      title() {
+        // return title
+        return `Week of ${moment(this.getDayDate('monday')).format('Do MMMM')}`;
+      }
+    }
+  </script>
+</calendar-week>

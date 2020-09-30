@@ -1,0 +1,89 @@
+<calendar-month-row>
+  <a class={ `calendar-month-row color-${getColor()} mt-1` } href="#!" onclick={ (e) => props.onItem(e, props.item) }>
+    <i class="fa fa-dot-circle mr-1" />
+    <i if={ !(isStart() && isEnd()) } class={ `fa-${isStart() ? 'play' : 'stop'} mr-1` } />
+    <span class="item-title">
+      { getTitle() }
+    </span>
+  </a>
+  
+  <script>
+    // require base class
+    import tmpl from 'riot-tmpl';
+    import Base from '../../js/base';
+    import moment from 'moment';
+
+    // export default
+    export default class CalendarMonthRow extends Base {
+      /**
+       * on before mount
+       */
+      onBeforeMount(...args) {
+        // run super
+        super.onBeforeMount(...args);
+      }
+
+      /**
+       * is it a start date?
+       */
+      isEnd() {
+        // key
+        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
+
+        // return item
+        const end = new Date(this.props.item.get(endKey) || 0);
+
+        // check
+        if (this.props.start < end && this.props.end > end) {
+          // return start
+          return true;
+        }
+      }
+
+      /**
+       * is it a start date?
+       */
+      isStart() {
+        // key
+        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
+
+        // return item
+        const start = new Date(this.props.item.get(startKey) || 0);
+
+        // check
+        if (this.props.start < start && this.props.end > start) {
+          // return start
+          return true;
+        }
+      }
+
+      /**
+       * get date
+       */
+      getDate() {
+        // keys
+        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
+        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
+
+        // format
+        return moment(this.props.item.get(this.isStart() ? startKey : endKey)).format('h:mma');
+      }
+
+      /**
+       * get color
+       */
+      getColor() {
+        // get color
+        return this.props.item.get(`_meta.${this.props.page.get('_id')}.color`) || 'primary';
+      }
+
+      /**
+       * get title
+       */
+      getTitle() {
+        // render title
+        return tmpl.tmpl(this.props.page.get('data.item.title') || '', this.props.item.get());
+      }
+    }
+  </script>
+</calendar-month-row>
