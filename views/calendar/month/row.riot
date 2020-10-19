@@ -9,20 +9,11 @@
   
   <script>
     // require base class
-    import tmpl from 'riot-tmpl';
-    import Base from '../../js/base';
     import moment from 'moment';
 
     // export default
-    export default class CalendarMonthRow extends Base {
-      /**
-       * on before mount
-       */
-      onBeforeMount(...args) {
-        // run super
-        super.onBeforeMount(...args);
-      }
-
+    export default class CalendarMonthRow {
+      
       /**
        * is it a start date?
        */

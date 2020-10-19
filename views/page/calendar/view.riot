@@ -1,18 +1,18 @@
-<dashup-page-calendar>
+<page-calendar-view>
   <div>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.model.id') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.model') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>model</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.form.id') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.form') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>form</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.start.uuid') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.start') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>start field</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.end.uuid') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.end') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>end field</b> for the calendar.
     </a>
@@ -29,24 +29,43 @@
 
   <script>
     // require base class
-    import Base from '../../js/base';
     import moment from 'moment';
 
+    // day week month
+    import calendarDay from '../../calendar/day';
+    import calendarWeek from '../../calendar/week';
+    import calendarMonth from '../../calendar/month';
+
     // export default
-    export default class DashupPageGrid extends Base {
+    export default class PageCalendarView {
+
+      /**
+       * local components
+       */
+      static get components() {
+        // return components
+        return {
+          calendarDay,
+          calendarWeek,
+          calendarMonth,
+        };
+      }
+
 
       /**
        * on before mount
        */
       onBeforeMount(...args) {
-        // on before mount
-        super.onBeforeMount(...args);
-
         // bind init
         this.init = this.init.bind(this);
 
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
+
+        // safe update
+        this.safeUpdate = () => {
+          this.update();
+        };
 
         // listeners
         this.props.page.on('data.form', this.init);
@@ -56,21 +75,9 @@
       /**
        * on before mount
        */
-      onBeforeUpdate(...args) {
-        // on before mount
-        super.onBeforeUpdate(...args);
-
-      }
-
-      /**
-       * on before mount
-       */
       onBeforeUnmount(...args) {
-        // on before mount
-        super.onBeforeUnmount(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
 
         // listeners
         this.props.page.removeListener('data.form', this.init);
@@ -81,11 +88,8 @@
        * on mounted
        */
       onMounted(...args) {
-        // run super
-        super.onMounted(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
 
         // init
         this.init();
@@ -99,7 +103,7 @@
         this.loading('calendar', true);
 
         // check model
-        if (!this.props.page.get('data.model.id')) {
+        if (!this.props.page.get('data.model')) {
           // unloading
           return this.loading('calendar', false);
         }
@@ -115,14 +119,21 @@
         const end = moment(this.props.date || new Date()).add(1, 'month').toDate();
         const start = moment(this.props.date || new Date()).startOf('day').toDate();
 
+        // start/end fields
+        const endField = this.getField(this.props.page.get('data.start'));
+        const startField = this.getField(this.props.page.get('data.end'));
+
+        // check end/start
+        if (!endField || !startField) return;
+
         // keys
-        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
-        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
+        const endKey = endField.name || endField.uuid;
+        const startKey = startField.name || startField.uuid;
 
         // load items
         this.update({
-          ended : await this.eden.get('dashup').page(this.props.page.get('data.model.id')).gt(endKey, end).listen(),
-          started : await this.eden.get('dashup').page(this.props.page.get('data.model.id')).gt(startKey, start).listen(),
+          ended : await this.props.dashup.page(this.props.page.get('data.model')).gt(endKey, end).listen(),
+          started : await this.props.dashup.page(this.props.page.get('data.model')).gt(startKey, start).listen(),
         });
       
         // listeners
@@ -134,17 +145,35 @@
       }
 
       /**
+       * get field
+       */
+      getField(uuid) {
+        // return value
+        return this.props.context.fields.find((field) => {
+          // return fields
+          return field.uuid === uuid;
+        });
+      }
+
+      /**
        * get items
        *
        * @param {String} col
        */
       getItems(start, end) {
         // check frontend
-        if (!this.eden.frontend) return [];
+        if (typeof window === 'undefined') return [];
+
+        // start/end fields
+        const endField = this.getField(this.props.page.get('data.start'));
+        const startField = this.getField(this.props.page.get('data.end'));
+
+        // check end/start
+        if (!endField || !startField) return [];
 
         // keys
-        const startKey = this.props.page.get('data.start.name') || this.props.page.get('data.start.uuid');
-        const endKey = this.props.page.get('data.end.name') || this.props.page.get('data.end.uuid');
+        const endKey = endField.name || endField.uuid;
+        const startKey = startField.name || startField.uuid;
 
         // get items
         const items = [...(this.state.started || []), ...(this.state.ended || [])].reduce((accum, item) => {
@@ -179,6 +208,51 @@
           return 0;
         });
       }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return classes
+        return Object.keys(obj).filter((key) => !!obj[key]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
     }
   </script>
-</dashup-page-calendar>
+</page-calendar-view>

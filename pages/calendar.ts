@@ -1,11 +1,11 @@
 
 // import page interface
-import { Page } from '@dashup/module';
+import { Struct } from '@dashup/module';
 
 /**
  * build address helper
  */
-export default class CalendarPage extends Page {
+export default class CalendarPage extends Struct {
 
   /**
    * returns page type
@@ -47,6 +47,7 @@ export default class CalendarPage extends Page {
     return {
       view   : 'page/calendar/view',
       menu   : 'page/calendar/menu',
+      filter : 'page/calendar/filter',
       config : 'page/calendar/config',
     };
   }

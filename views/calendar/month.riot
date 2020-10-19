@@ -24,19 +24,29 @@
 
   <script>
     // require base class
-    import Base from '../js/base';
     import moment from 'moment';
     import PerfectScrollbar from 'perfect-scrollbar';
 
+    // import components
+    import calendarMonthRow from './month/row.riot';
+
     // export default
-    export default class CalendarMonth extends Base {
+    export default class CalendarMonth {
+
+      /**
+       * local components
+       */
+      static get components() {
+        // return components
+        return {
+          calendarMonthRow,
+        };
+      }
+
       /**
        * on before mount
        */
       onBeforeMount(...args) {
-        // run super
-        super.onBeforeMount(...args);
-
         // set state elements
         this.date = new Date();
         this.moment = moment;
@@ -50,52 +60,18 @@
           'Sunday'
         ];
         this.state.weeks = this.getDays();
-
-        // next/prev
-        this.title = this.title.bind(this);
       }
 
       /**
        * on mounted
        */
       onBeforeUpdate(...args) {
-        // run super
-        super.onBeforeUpdate(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
         
         // set day
         this.date = this.props.date || new Date();
         this.state.weeks = this.getDays();
-      }
-
-      /**
-       * on mounted
-       */
-      onMounted(...args) {
-        // run super
-        super.onMounted(...args);
-
-        // check frontend
-        if (!this.eden.frontend) return;
-
-        // setup
-        this.setup();
-      }
-
-      /**
-       * on updated
-       */
-      onUpdated(...args) {
-        // run super
-        super.onUpdated(...args);
-
-        // check frontend
-        if (!this.eden.frontend) return;
-
-        // setup
-        this.setup();
       }
 
       /**
@@ -160,22 +136,6 @@
       isToday(date) {
         // check day
         return moment().format('YYYY-MM-DD') === moment(date).format('YYYY-MM-DD');
-      }
-
-      /**
-       * setup
-       */
-      setup() {
-        // check frontend
-        if (!this.eden.frontend) return;
-      }
-
-      /**
-       * sets title
-       */
-      title() {
-        // return title
-        return moment(this.date || new Date()).format('MMMM YYYY');
       }
     }
   </script>

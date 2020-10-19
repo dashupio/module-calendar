@@ -44,19 +44,15 @@
 
   <script>
     // require base class
-    import Base from '../js/base';
     import moment from 'moment';
     import PerfectScrollbar from 'perfect-scrollbar';
 
     // export default
-    export default class CalendarWeek extends Base {
+    export default class CalendarWeek {
       /**
        * on before mount
        */
       onBeforeMount(...args) {
-        // run super
-        super.onBeforeMount(...args);
-
         // set state elements
         this.state.days = [
           'Monday',
@@ -93,20 +89,14 @@
           [22, 10],
           [23, 11],
         ];
-
-        // next/prev
-        this.title = this.title.bind(this);
       }
 
       /**
        * on mounted
        */
       onBeforeUpdate(...args) {
-        // run super
-        super.onBeforeUpdate(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
         
         // set day
         this.date = this.props.date || new Date();
@@ -116,31 +106,11 @@
        * on mounted
        */
       onMounted(...args) {
-        // run super
-        super.onMounted(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
 
         // setup ps
         this.ps = this.ps || new PerfectScrollbar(this.$('.calendar-table-bottom'));
-
-        // setup
-        this.setup();
-      }
-
-      /**
-       * on updated
-       */
-      onUpdated(...args) {
-        // run super
-        super.onUpdated(...args);
-
-        // check frontend
-        if (!this.eden.frontend) return;
-
-        // setup
-        this.setup();
       }
 
       /**
@@ -149,14 +119,6 @@
       isToday(day) {
         // check day
         return moment().format('dddd').toLowerCase() === day.toLowerCase();
-      }
-
-      /**
-       * setup
-       */
-      setup() {
-        // check frontend
-        if (!this.eden.frontend) return;
       }
 
       /**
@@ -195,12 +157,48 @@
         return actualDate.toDate();
       }
 
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
       /**
-       * sets title
+       * ref
        */
-      title() {
-        // return title
-        return `Week of ${moment(this.getDayDate('monday')).format('Do MMMM')}`;
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return classes
+        return Object.keys(obj).filter((key) => !!obj[key]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
       }
     }
   </script>

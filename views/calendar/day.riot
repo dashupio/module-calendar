@@ -30,19 +30,15 @@
 
   <script>
     // require base class
-    import Base from '../js/base';
     import moment from 'moment';
     import PerfectScrollbar from 'perfect-scrollbar';
 
     // export default
-    export default class CalendarDay extends Base {
+    export default class CalendarDay {
       /**
        * on before mount
        */
       onBeforeMount(...args) {
-        // run super
-        super.onBeforeMount(...args);
-
         // set state elements
         this.date = this.props.date || new Date();
         this.state.hours = [
@@ -74,20 +70,14 @@
 
         // set day
         this.day = moment(this.date).format('dddd LL');
-
-        // next/prev
-        this.title = this.title.bind(this);
       }
 
       /**
        * on mounted
        */
       onBeforeUpdate(...args) {
-        // run super
-        super.onBeforeUpdate(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
         
         // set day
         this.date = this.props.date || new Date();
@@ -98,22 +88,56 @@
        * on mounted
        */
       onMounted(...args) {
-        // run super
-        super.onMounted(...args);
-
         // check frontend
-        if (!this.eden.frontend) return;
+        if (typeof window === 'undefined') return;
 
         // setup ps
         this.ps = this.ps || new PerfectScrollbar(this.$('.table-scrolling'));
       }
 
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
       /**
-       * sets title
+       * ref
        */
-      title() {
-        // return title
-        return this.day;
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return classes
+        return Object.keys(obj).filter((key) => !!obj[key]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
       }
     }
   </script>

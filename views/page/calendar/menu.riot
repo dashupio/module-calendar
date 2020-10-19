@@ -1,12 +1,12 @@
-<dashup-nav-calendar>
+<page-calendar-menu>
   <div>
-    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'day'}) } onclick={ (e) => props.update('calendar', 'day') }>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'day'}) } onclick={ (e) => props.props('calendar', 'day') }>
       Day
     </button>
-    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'week'}) } onclick={ (e) => props.update('calendar', 'week') }>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : props.calendar === 'week'}) } onclick={ (e) => props.props('calendar', 'week') }>
       Week
     </button>
-    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : !props.calendar || props.calendar === 'month'}) } onclick={ (e) => props.update('calendar', 'month') }>
+    <button class={ classes({ 'btn btn-primary ml-2' : true, 'active' : !props.calendar || props.calendar === 'month'}) } onclick={ (e) => props.props('calendar', 'month') }>
       Month
     </button>
 
@@ -28,20 +28,10 @@
 
   <script>
     // require base class
-    import Base from '../../js/base';
     import moment from 'moment';
 
     // export default
-    export default class DashupNavCalendar extends Base {
-      
-      /**
-       * on before mount
-       */
-      onBeforeMount(...args) {
-        // run super
-        super.onBeforeMount(...args);
-        
-      }
+    export default class DashupNavCalendar {
 
       /**
        * on prev
@@ -52,7 +42,7 @@
         e.stopPropagation();
         
         // set date
-        this.props.update('date', new Date());
+        this.props.props('date', new Date());
       }
 
       /**
@@ -66,15 +56,15 @@
         // check date
         if (!this.props.calendar || this.props.calendar === 'month') {
           // add one month
-          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'month').toDate());
+          return this.props.props('date', moment(this.props.date || new Date()).subtract(1, 'month').toDate());
         }
         if (this.props.calendar === 'week') {
           // add one month
-          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'week').toDate());
+          return this.props.props('date', moment(this.props.date || new Date()).subtract(1, 'week').toDate());
         }
         if (this.props.calendar === 'day') {
           // add one month
-          return this.props.update('date', moment(this.props.date || new Date()).subtract(1, 'day').toDate());
+          return this.props.props('date', moment(this.props.date || new Date()).subtract(1, 'day').toDate());
         }
       }
 
@@ -89,15 +79,15 @@
         // check date
         if (!this.props.calendar || this.props.calendar === 'month') {
           // add one month
-          return this.props.update('date', moment(this.props.date || new Date()).add(1, 'month').toDate());
+          return this.props.props('date', moment(this.props.date || new Date()).add(1, 'month').toDate());
         }
         if (this.props.calendar === 'week') {
           // add one month
-          return this.props.update('date', moment(this.props.date || new Date()).add(1, 'week').toDate());
+          return this.props.props('date', moment(this.props.date || new Date()).add(1, 'week').toDate());
         }
         if (this.props.calendar === 'day') {
           // add one month
-          this.props.update('date', moment(this.props.date || new Date()).add(1, 'day').toDate());
+          this.props.props('date', moment(this.props.date || new Date()).add(1, 'day').toDate());
         }
       }
 
@@ -108,6 +98,51 @@
         // check day
         return moment().format('YYYY-MM-DD') === moment(date).format('YYYY-MM-DD');
       }
+
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // MISC METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
+      /**
+       * ref
+       */
+      ref(name) {
+        // set refs
+        if (!this.refs) this.refs = {};
+
+        // return ref function
+        return (that) => {
+          // set ref
+          this.refs[name] = that;
+        };
+      }
+
+      /**
+       * classes
+       */
+      classes(obj) {
+        // return classes
+        return Object.keys(obj).filter((key) => !!obj[key]).join(' ');
+      }
+
+      /**
+       * set loading
+       */
+      loading(type, way) {
+        // set loading
+        if (!this.__loading) this.__loading = new Map();
+
+        // check loading
+        if (!type) return !!Array.from(this.__loading.values()).find((v) => v);
+        if (typeof way === 'undefined') return !!this.__loading.get(type);
+
+        // set loading
+        this.__loading.set(type, way);
+        this.update();
+      }
     }
   </script>
-</dashup-nav-calendar>
+</page-calendar-menu>
