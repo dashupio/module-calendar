@@ -1,9 +1,7 @@
 <calendar-month-row>
   <a class={ `calendar-month-row color-${getColor()} mt-1` } href="#!" onclick={ (e) => props.onItem(e, props.item) }>
-    <i class="fa fa-dot-circle mr-1" />
-    <i if={ !(isStart() && isEnd()) } class={ `fa-${isStart() ? 'play' : 'stop'} mr-1` } />
     <span class="item-title">
-      { getTitle() }
+      <hbs template={ props.page.get('data.display') || '' } data={ props.item ? props.item.toJSON() : {} } />
     </span>
   </a>
   
@@ -66,14 +64,6 @@
       getColor() {
         // get color
         return this.props.item.get(`_meta.${this.props.page.get('_id')}.color`) || 'primary';
-      }
-
-      /**
-       * get title
-       */
-      getTitle() {
-        // render title
-        return tmpl.tmpl(this.props.page.get('data.item.title') || '', this.props.item.get());
       }
     }
   </script>

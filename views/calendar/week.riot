@@ -33,7 +33,7 @@
                 { hour[1].toString() }{ hour[0] > 11 ? 'pm' : 'am' }
               </th>
               <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day) }) }>
-                
+                <calendar-month-row each={ (item, i) in props.getItems(getDayDate(day, hour[0]), moment(getDayDate(day, hour[0])).add(1, 'hours').toDate()) } item={ item } page={ props.page } date={ props.date } start={ getDayDate(day, hour[0]) } end={ moment(getDayDate(day, hour[0])).add(1, 'days').toDate() } on-item={ props.onItem } />
               </td>
             </tr>
           </tbody>
@@ -47,12 +47,29 @@
     import moment from 'moment';
     import PerfectScrollbar from 'perfect-scrollbar';
 
+    // import components
+    import calendarMonthRow from './month/row.riot';
+
     // export default
     export default class CalendarWeek {
+
+      /**
+       * local components
+       */
+      static get components() {
+        // return components
+        return {
+          calendarMonthRow,
+        };
+      }
+
       /**
        * on before mount
        */
       onBeforeMount(...args) {
+        // mixin
+        this.moment = moment;
+
         // set state elements
         this.state.days = [
           'Monday',
@@ -135,7 +152,7 @@
       /**
        * get day date
        */
-      getDayDate(day) {
+      getDayDate(day, hour) {
         // days
         const days = this.state.days.map((d) => d.toLowerCase());
 
@@ -144,13 +161,22 @@
         const current = days.indexOf(moment(this.date).format('dddd').toLowerCase());
 
         // actual date
-        const actualDate = moment(this.date);
+        let actualDate = moment(this.date);
 
         // check if subtract or add
         if (id > current) {
           actualDate.add(id - current, 'day');
         } else if (id < current) {
           actualDate.subtract(current - id, 'day');
+        }
+
+        // reset hours
+        actualDate.startOf('day');
+
+        // check hour
+        if (hour) {
+          // set hours
+          actualDate = moment(actualDate.toDate().setHours(hour));
         }
 
         // return actual date
