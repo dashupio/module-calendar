@@ -17,12 +17,12 @@
       Please select a <b>end field</b> for the calendar.
     </a>
 
-    <div if={ !loading('calendar') }>
+    <div if={ props.page.get('data.form') && !loading('calendar') }>
       <calendar-day if={ props.calendar === 'day' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
       <calendar-week if={ props.calendar === 'week' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
       <calendar-month if={ !props.calendar || props.calendar === 'month' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
     </div>
-    <div if={ loading('calendar') } class="text-center my-5 py-5">
+    <div if={ props.page.get('data.form') && loading('calendar') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
     </div>
   </div>
