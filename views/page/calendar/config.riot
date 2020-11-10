@@ -60,7 +60,7 @@
         // unset form
         if (val !== this.props.page.get('data.model') && this.props.page.get('data.form')) {
           // unset form
-          this.props.data('form', null);
+          await this.props.data('form', null);
         }
         
         // set model
@@ -95,7 +95,7 @@
       /**
        * on model
        */
-      onEnd() {
+      onEnd(val) {
         // get value
         if (!val) val = this.refs.end.val();
 

@@ -17,12 +17,12 @@
       Please select a <b>end field</b> for the calendar.
     </a>
 
-    <div if={ props.page.get('data.form') && !loading('calendar') }>
+    <div if={ props.page.get('data.start') && props.page.get('data.end') && !loading('calendar') }>
       <calendar-day if={ props.calendar === 'day' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
       <calendar-week if={ props.calendar === 'week' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
       <calendar-month if={ !props.calendar || props.calendar === 'month' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
     </div>
-    <div if={ props.page.get('data.form') && loading('calendar') } class="text-center my-5 py-5">
+    <div if={ props.page.get('data.start') && props.page.get('data.end') && loading('calendar') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
     </div>
   </div>
@@ -68,7 +68,9 @@
         };
 
         // listeners
+        this.props.page.on('data.end', this.init);
         this.props.page.on('data.form', this.init);
+        this.props.page.on('data.start', this.init);
         this.props.page.on('data.model', this.init);
       }
 
@@ -80,8 +82,10 @@
         if (typeof window === 'undefined') return;
 
         // listeners
+        this.props.page.removeListener('data.end', this.init);
         this.props.page.removeListener('data.form', this.init);
         this.props.page.removeListener('data.model', this.init);
+        this.props.page.removeListener('data.start', this.init);
       }
 
       /**
