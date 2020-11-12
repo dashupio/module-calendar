@@ -86,6 +86,17 @@
         this.props.page.removeListener('data.form', this.init);
         this.props.page.removeListener('data.model', this.init);
         this.props.page.removeListener('data.start', this.init);
+
+        // kill listeners
+        if (this.state.ended || this.state.started) {
+          // remove listeners
+          this.state.ended.removeListener('update', this.safeUpdate);
+          this.state.started.removeListener('update', this.safeUpdate);
+
+          // deafen
+          this.state.ended.deafen();
+          this.state.started.deafen();
+        }
       }
 
       /**
@@ -114,9 +125,13 @@
 
         // kill listeners
         if (this.state.ended || this.state.started) {
-          // @todo kill
+          // remove listeners
           this.state.ended.removeListener('update', this.safeUpdate);
           this.state.started.removeListener('update', this.safeUpdate);
+
+          // deafen
+          this.state.ended.deafen();
+          this.state.started.deafen();
         }
 
         // starts and ends
