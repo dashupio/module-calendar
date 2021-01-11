@@ -7,11 +7,6 @@
       
       <ul class="dropdown-menu">
         <li>
-          <button class={ classes({ 'dropdown-item' : true, 'active' : props.page.get('user.calendar') === 'day' }) } onclick={ (e) => onCalendar(e, 'day') }>
-            Day
-          </button>
-        </li>
-        <li>
           <button class={ classes({ 'dropdown-item' : true, 'active' : props.page.get('user.calendar') === 'week' }) } onclick={ (e) => onCalendar(e, 'week') }>
             Week
           </button>

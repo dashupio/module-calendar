@@ -18,7 +18,6 @@
     </a>
 
     <div if={ props.page.get('data.start') && props.page.get('data.end') && !loading('calendar') }>
-      <calendar-day if={ props.page.get('user.calendar') === 'day' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
       <calendar-week if={ props.page.get('user.calendar') === 'week' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
       <calendar-month if={ !props.page.get('user.calendar') || props.page.get('user.calendar') === 'month' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
     </div>
@@ -32,7 +31,6 @@
     import moment from 'moment';
 
     // day week month
-    import calendarDay from '../../calendar/day';
     import calendarWeek from '../../calendar/week';
     import calendarMonth from '../../calendar/month';
 
@@ -45,12 +43,10 @@
       static get components() {
         // return components
         return {
-          calendarDay,
           calendarWeek,
           calendarMonth,
         };
       }
-
 
       /**
        * on before mount
