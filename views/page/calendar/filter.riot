@@ -1,17 +1,17 @@
 <page-calendar-filter>
-  <dashup-page-filter tags={ getTags().length ? getTags() : null } fields={ props.context.fields } on-search={ (e) => onSearch(e) } has-user={ props.page.get('data.user') } { ...getProps() } />
+  <dashup-page-filter tags={ getTags().length ? getTags() : null } fields={ props.context.fields } has-user={ props.page.get('data.user') } on-search={ (e) => onSearch(e) } { ...getProps() } />
 
   <script>
     // export default
-    export default class PageBoardFilter {
-      
+    export default class PageGridFilter {
+
       /**
        * on before mount
        */
-      onBeforeMount(...args) {
-        
-        // bind
-        this.onSearch = this.onSearch.bind(this);
+      onBeforeMount() {
+        // tags and props
+        this.getTags = this.getTags.bind(this);
+        this.getProps = this.getProps.bind(this);
       }
 
       /**
@@ -43,19 +43,13 @@
       getTags() {
         // get tag values
         const fields = this.props.context.fields;
-        const tagFields = [...fields].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+        const tagField = fields.find((f) => f.uuid === this.props.page.get('data.tag'));
 
         // tag field
-        if (!tagFields) return [];
+        if (!tagField) return [];
 
         // get options
-        return tagFields.reduce((accum, field) => {
-          // push
-          accum.push(...(field.options || []));
-
-          // return accum
-          return accum;
-        }, []);
+        return tagField.options || [];
       }
     }
   </script>

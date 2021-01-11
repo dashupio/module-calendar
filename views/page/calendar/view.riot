@@ -18,9 +18,9 @@
     </a>
 
     <div if={ props.page.get('data.start') && props.page.get('data.end') && !loading('calendar') }>
-      <calendar-day if={ props.calendar === 'day' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
-      <calendar-week if={ props.calendar === 'week' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
-      <calendar-month if={ !props.calendar || props.calendar === 'month' } ref={ ref('calendar') } page={ props.page } date={ props.date } get-items={ (s, e) => getItems(s, e) } on-item={ props.onItem } />
+      <calendar-day if={ props.page.get('user.calendar') === 'day' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
+      <calendar-week if={ props.page.get('user.calendar') === 'week' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
+      <calendar-month if={ !props.page.get('user.calendar') || props.page.get('user.calendar') === 'month' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
     </div>
     <div if={ props.page.get('data.start') && props.page.get('data.end') && loading('calendar') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
@@ -67,11 +67,13 @@
           this.update();
         };
 
-        // listeners
-        this.props.page.on('data.end', this.init);
-        this.props.page.on('data.form', this.init);
-        this.props.page.on('data.start', this.init);
-        this.props.page.on('data.model', this.init);
+        // add listeners
+        this.props.page.on('do.data.form', this.init);
+        this.props.page.on('do.data.model', this.init);
+        this.props.page.on('do.user.where', this.init);
+        this.props.page.on('do.user.filter', this.init);
+        this.props.page.on('do.data.filter', this.init);
+        this.props.page.on('do.user.calendar', this.init);
       }
 
       /**
@@ -81,21 +83,40 @@
         // check frontend
         if (typeof window === 'undefined') return;
 
-        // listeners
-        this.props.page.removeListener('data.end', this.init);
-        this.props.page.removeListener('data.form', this.init);
-        this.props.page.removeListener('data.model', this.init);
-        this.props.page.removeListener('data.start', this.init);
+        // add listeners
+        this.props.page.removeListener('do.data.form', this.init);
+        this.props.page.removeListener('do.data.model', this.init);
+        this.props.page.removeListener('do.user.where', this.init);
+        this.props.page.removeListener('do.user.filter', this.init);
+        this.props.page.removeListener('do.data.filter', this.init);
+        this.props.page.removeListener('do.user.calendar', this.init);
 
-        // kill listeners
-        if (this.state.ended || this.state.started) {
-          // remove listeners
-          this.state.ended.removeListener('update', this.safeUpdate);
-          this.state.started.removeListener('update', this.safeUpdate);
+        // remove item listeners
+        if (this.state.data) {
+          this.state.data.deafen();
+          this.state.data.removeListener('update', this.safeUpdate);
+        }
+      }
 
-          // deafen
-          this.state.ended.deafen();
-          this.state.started.deafen();
+      /**
+       * on updated
+       */
+      onUpdated(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // set ps
+        if (!this.$('.ps') && this.$('.calendar-cols')) {
+          // perfect scrollbar
+          this.ps = new PerfectScrollbar(this.$('.calendar-cols'));
+        }
+
+        // check search
+        if (this.search !== this.props.search || this.date !== this.props.date) {
+          // init
+          this.date   = this.props.date;
+          this.search = this.props.search;
+          this.init();
         }
       }
 
@@ -110,68 +131,166 @@
         this.init();
       }
 
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // INIT METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
       /**
        * init
        */
       async init() {
+        // check
+        if (this.initializing) return;
+        if (!this.props.page.get('data.form')) return;
+        if (!this.props.page.get('data.model')) return;
+
+        // initializing
+        this.initializing = true;
+
         // loading
-        this.loading('calendar', true);
-
-        // check model
-        if (!this.props.page.get('data.model')) {
-          // unloading
-          return this.loading('calendar', false);
-        }
-
-        // kill listeners
-        if (this.state.ended || this.state.started) {
-          // remove listeners
-          this.state.ended.removeListener('update', this.safeUpdate);
-          this.state.started.removeListener('update', this.safeUpdate);
-
-          // deafen
-          this.state.ended.deafen();
-          this.state.started.deafen();
-        }
-
-        // starts and ends
-        const end = moment(this.props.date || new Date()).add(1, 'month').toDate();
-        const start = moment(this.props.date || new Date()).startOf('day').toDate();
-
-        // start/end fields
-        const endField = this.getField(this.props.page.get('data.start'));
-        const startField = this.getField(this.props.page.get('data.end'));
-
-        // check end/start
-        if (!endField || !startField) return;
-
-        // keys
-        const endKey = endField.name || endField.uuid;
-        const startKey = startField.name || startField.uuid;
-
-        // load items
         this.update({
-          ended : await this.props.dashup.page(this.props.page.get('data.model')).gt(endKey, end).listen(),
-          started : await this.props.dashup.page(this.props.page.get('data.model')).gt(startKey, start).listen(),
+          loading : new Date(),
         });
-      
-        // listeners
-        this.state.ended.on('update', this.safeUpdate);
-        this.state.started.on('update', this.safeUpdate);
+
+        // check data
+        if (this.state.data) {
+          this.state.data.deafen();
+          this.state.data.removeListener('update', this.safeUpdate);
+        }
+
+        // find data
+        const query = this.getQuery();
+
+        // find
+        const data = await query.listen();
 
         // loading
-        this.loading('calendar', false);
+        this.update({
+          data,
+
+          loading : false,
+        });
+
+        // safe update
+        data.on('update', this.safeUpdate);
+
+        // unset
+        this.initializing = false;
       }
 
+
+      // ////////////////////////////////////////////////////////////////////////////
+      //
+      // GET METHODS
+      //
+      // ////////////////////////////////////////////////////////////////////////////
+
       /**
-       * get field
+       * get query
        */
-      getField(uuid) {
-        // return value
-        return this.props.context.fields.find((field) => {
-          // return fields
-          return field.uuid === uuid;
+      getQuery() {
+        // get form
+        const form = this.props.dashup.page(this.props.page.get('data.form'));
+        const calendar = this.props.page.get('user.calendar') || 'month';
+
+        // set query
+        let query = this.props.dashup.page(this.props.page.get('data.model'));
+
+        // loop forms
+        query = query.in('_meta.form', [this.props.page.get('data.form')]);
+
+        // load filter
+        let filter = null;
+
+        // try/catch
+        try {
+          filter = JSON.parse(this.props.page.get('data.filter'));
+        } catch (e) {}
+
+        // add initial where
+        if (filter) {
+          // add wheres
+          filter.forEach((where) => {
+            // where
+            query = query.where(where);
+          });
+        }
+
+        // search
+        if (this.props.search && this.props.search.length) {
+          // add search
+          query = query.search(this.props.search);
+        }
+
+        // test by user
+        if ((this.props.page.get('user.filter') || {}).me) {
+          // get user fields
+          const userFields = [...(form.get('data.fields') || [])].filter((f) => (this.props.page.get('data.user') || []).includes(f.uuid));
+          
+          // loop fields
+          query = query[userFields.length > 1 ? 'or' : 'where'](...(userFields.map((userField) => {
+            // return or
+            return {
+              [userField.name || userField.uuid] : this.props.dashup.get('_meta.member'),
+            };
+          })));
+        }
+
+        // user query
+        (this.props.page.get('user.where') || []).forEach((where) => {
+          // types
+          const numberTypes = ['gt', 'lt', 'gte', 'lte'];
+
+          // add query
+          query = query[where[0]](where[1], numberTypes.includes(where[0]) ? parseFloat(where[2]) : where[2]);
         });
+
+        // get filter tags
+        if ((this.props.page.get('user.filter.tags') || []).length) {
+          // check vals
+          const tagFields = [...(form.get('data.fields') || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+
+          // loop fields
+          query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
+            // return or
+            return {
+              [tagField.name || tagField.uuid] : this.props.page.get('user.filter.tags')
+            };
+          })));
+        }
+
+        // get start/end
+        const end   = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
+        const start = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
+
+        // start end date
+        let endDate   = null;
+        let startDate = null;
+
+        // calendar
+        if (calendar === 'month') {
+          // week
+          endDate = moment(this.props.date || new Date()).endOf('month').toDate();
+          startDate = moment(this.props.date || new Date()).startOf('month').toDate();
+        } else if (calendar === 'week') {
+          // week
+          endDate = moment(this.props.date || new Date()).endOf('week').toDate();
+          startDate = moment(this.props.date || new Date()).startOf('week').toDate();
+        } else if (calendar === 'day') {
+          // units
+          endDate = moment(this.props.date || new Date()).endOf('day').toDate();
+          startDate = moment(this.props.date || new Date()).startOf('day').toDate();
+        }
+
+        // add where
+        query = query.gte(end.name || end.uuid, startDate);
+        query = query.lte(start.name || start.uuid, endDate);
+
+        // return query
+        return query;
       }
 
       /**
@@ -181,11 +300,15 @@
        */
       getItems(start, end) {
         // check frontend
+        if (!this.state.data) return [];
         if (typeof window === 'undefined') return [];
 
+        // get form
+        const form = this.props.dashup.page(this.props.page.get('data.form'));
+
         // start/end fields
-        const endField = this.getField(this.props.page.get('data.start'));
-        const startField = this.getField(this.props.page.get('data.end'));
+        const endField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
+        const startField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
 
         // check end/start
         if (!endField || !startField) return [];
@@ -194,28 +317,14 @@
         const endKey = endField.name || endField.uuid;
         const startKey = startField.name || startField.uuid;
 
-        // get items
-        const items = [...(this.state.started || []), ...(this.state.ended || [])].reduce((accum, item) => {
-          // push
-          if (!accum.find((sub) => sub.get('_id') === item.get('_id'))) accum.push(item);
-
-          // return accumulator
-          return accum;
-        }, []);
-
         // return queries
-        return items.filter((row) => {
+        return [...(this.state.data)].filter((row) => {
           // get values
           const rowEnd = new Date(row.get(endKey) || 0);
           const rowStart = new Date(row.get(startKey) || 0);
 
           // check ends within or starts within
-          if (start < rowStart && end > rowStart) {
-            return true;
-          }
-          if (end > rowEnd && start < rowEnd) {
-            return true;
-          }
+          if (rowStart >= end && rowEnd <= start) return true;
         }).sort((a, b) => {
           // sort order
           const aC = new Date(a.get(startKey) || 0);

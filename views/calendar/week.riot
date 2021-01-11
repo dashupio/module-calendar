@@ -9,35 +9,29 @@
             <th each={ (day, i) in state.days }>
               { day }
               <span class="float-right">
-                { getTextDate(day) }
+                { getTitle(day, i) }
               </span>
             </th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <th>
-              All Day
-            </th>
-            <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day) }) }>
-
-            </td>
-          </tr>
-        </tbody>
       </table>
       <div class="calendar-table-bottom">
-        <table class="table table-bordered table-striped table-fixed">
+        <table class="table table-bordered table-striped table-fixed table-calendar">
           <tbody>
             <tr each={ (hour, i) in state.hours }>
               <th>
                 { hour[1].toString() }{ hour[0] > 11 ? 'pm' : 'am' }
               </th>
-              <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day) }) }>
-                <calendar-month-row each={ (item, i) in props.getItems(getDayDate(day, hour[0]), moment(getDayDate(day, hour[0])).add(1, 'hours').toDate()) } item={ item } page={ props.page } date={ props.date } start={ getDayDate(day, hour[0]) } end={ moment(getDayDate(day, hour[0])).add(1, 'days').toDate() } on-item={ props.onItem } />
+              <td each={ (day, i) in state.days } class={ classes({ 'bg-active' : isToday(day), 'day-row' : true }) } data-day={ i }>
+
               </td>
             </tr>
           </tbody>
         </table>
+
+        <div class="calendar-items" each={ (day, i) in state.days } data-day={ i }>
+          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i) } data-id={ item.get('_id') } item={ item } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item) } { ...getProps() } />
+        </div>
       </div>
     </div>
   </div>
@@ -48,7 +42,11 @@
     import PerfectScrollbar from 'perfect-scrollbar';
 
     // import components
-    import calendarMonthRow from './month/row.riot';
+    import calendarTask from './task.riot';
+
+    // get start/end
+    let end = null;
+    let start = null;
 
     // export default
     export default class CalendarWeek {
@@ -59,7 +57,7 @@
       static get components() {
         // return components
         return {
-          calendarMonthRow,
+          calendarTask,
         };
       }
 
@@ -131,6 +129,17 @@
       }
 
       /**
+       * on updated
+       */
+      onUpdated(...args) {
+        // check frontend
+        if (typeof window === 'undefined') return;
+
+        // set position
+        this.setPosition();
+      }
+
+      /**
        * check is today
        */
       isToday(day) {
@@ -139,48 +148,211 @@
       }
 
       /**
-       * get text date
+       * get items
        */
-      getTextDate(day) {
-        // get day date
-        const date = this.getDayDate(day);
+      getItems(day, i) {
+        // date
+        const date = this.props.date || new Date();
 
-        // return moment date
-        return moment(date).format('Do MMM');
+        // get items
+        return this.props.getItems(
+          moment(date).startOf('week').add(i, 'days').toDate(),
+          moment(date).startOf('week').add((i + 1), 'days').toDate()
+        );
       }
 
       /**
-       * get day date
+       * get width
        */
-      getDayDate(day, hour) {
-        // days
-        const days = this.state.days.map((d) => d.toLowerCase());
+      getWidth(day, i) {
+        // date
+        const date = this.props.date || new Date();
+        
+        // get items
+        const items = this.getItems(day, i);
 
-        // check date
-        const id      = days.indexOf(day.toLowerCase());
-        const current = days.indexOf(moment(this.date).format('dddd').toLowerCase());
+        // get form
+        const form = this.props.dashup.page(this.props.page.get('data.form'));
 
-        // actual date
-        let actualDate = moment(this.date);
+        // start/end fields
+        const endField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
+        const startField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
 
-        // check if subtract or add
-        if (id > current) {
-          actualDate.add(id - current, 'day');
-        } else if (id < current) {
-          actualDate.subtract(current - id, 'day');
+        // width starts at 1
+        let width = 1;
+
+        // loop items
+        for (let it = 0; it < items.length; it++) {
+          // reset pos
+          items[it].set(`_pos.${i}.right`, 0);
+
+          // check prev
+          if (!items[it - 1]) continue;
+
+          // start/end
+          let Lend   = new Date(items[it - 1].get(startField.name || startField.uuid));
+          let Lstart = new Date(items[it - 1].get(endField.name || endField.uuid));
+          let Rend   = new Date(items[it].get(startField.name || startField.uuid));
+          let Rstart = new Date(items[it].get(endField.name || endField.uuid));
+
+          if (Lstart < moment(date).startOf('week').add(i, 'days').toDate()) {
+            Lstart = moment(date).startOf('week').add(i, 'days').toDate();
+          }
+          if (Rstart < moment(date).startOf('week').add(i, 'days').toDate()) {
+            Rstart = moment(date).startOf('week').add(i, 'days').toDate();
+          }
+          if (Lend > moment(date).startOf('week').add(i + 1, 'days').toDate()) {
+            Lend = moment(date).startOf('week').add(i + 1, 'days').toDate();
+          }
+          if (Rend > moment(date).startOf('week').add(i + 1, 'days').toDate()) {
+            Rend = moment(date).startOf('week').add(i + 1, 'days').toDate();
+          }
+
+          // check end overlaps
+          if (Lstart <= Rend || Lend <= Rstart) {
+            width = width + 1;
+
+            // pos left
+            items[it].set(`_pos.${i}.left`, (items[it - 1].get(`_pos.${i}.left`) || 0) + 1);
+            items[it - 1].set(`_pos.${i}.right`, (items[it - 1].get(`_pos.${i}.right`) || 0) + 1);
+          }
         }
 
-        // reset hours
-        actualDate.startOf('day');
+        // return width
+        return width;
+      }
 
-        // check hour
-        if (hour) {
-          // set hours
-          actualDate = moment(actualDate.toDate().setHours(hour));
+      /**
+       * get props
+       */
+      getProps() {
+        // clone
+        const newProps = { ...(this.props) };
+
+        // delete
+        delete newProps.ref;
+        delete newProps.type;
+        delete newProps.item;
+        delete newProps.view;
+        delete newProps.class;
+        delete newProps.struct;
+        delete newProps.onItem;
+
+        // return
+        return newProps;
+      }
+
+      /**
+       * get text date
+       */
+      getTitle(day, i) {
+        // date
+        const date = this.props.date || new Date();
+
+        // return moment date
+        return moment(date).startOf('week').add(i, 'days').format('Do MMM');
+      }
+
+      /**
+       * get item position
+       */
+      getPosition(item, i) {
+        // date
+        const date = this.props.date || new Date();
+
+        // form
+        const form = this.props.dashup.page(this.props.page.get('data.form'));
+
+        // get start/end
+        const end   = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
+        const start = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
+
+        // seconds
+        let endTime = moment(date).startOf('week').add(i + 1, 'days').toDate().getTime();
+        let startTime = moment(date).startOf('week').add(i, 'days').toDate().getTime();
+        let totalSeconds = endTime - startTime;
+
+        // item start
+        let itemEnd = new Date(item.get(end.name || end.uuid) || new Date()).getTime();
+        let itemStart = new Date(item.get(start.name || start.uuid) || new Date()).getTime();
+
+        // set start
+        if (item.get('_change.start') && itemStart < startTime) {
+          itemStart = startTime;
+        }
+        if (item.get('_change.end') && itemEnd > endTime) {
+          itemEnd = endTime;
         }
 
-        // return actual date
-        return actualDate.toDate();
+        // get actual time
+        const actualStart = itemStart - startTime;
+        const actualEnd = itemEnd - itemStart;
+
+        // get top
+        let top = (actualStart / totalSeconds) * 100;
+        let height = (actualEnd / totalSeconds) * 100;
+
+        // get change
+        if (item.get('_change.start')) {
+          top = top - item.get('_change.start');
+        }
+
+        // set width
+        height = (height + (item.get('_change.start') || 0)) - (item.get('_change.end') || 0);
+
+        // left/right
+        if (top < 0) top = 0;
+        if (height > (100 - top)) height = (100 - top);
+
+        // 100% width
+        let left = 0;
+        let width = 100;
+
+        console.log(item.get(`_pos.${i}`))
+
+        if (item.get(`_pos.${i}.right`) || item.get(`_pos.${i}.left`)) {
+          width = width / ((item.get(`_pos.${i}.right`) || 0) + (item.get(`_pos.${i}.left`) || 0) + 1);
+        }
+        if (item.get(`_pos.${i}.left`)) {
+          left = 100 / (item.get(`_pos.${i}.left`) + 1);
+        }
+
+        // return
+        return `top: ${top.toFixed(2)}%; height: ${height.toFixed(2)}%; width: ${width}%; left:${left}%`;
+      }
+
+      /**
+       * set position
+       */
+      setPosition() {
+        // loop days
+        this.state.days.forEach((day, i) => {
+          // get day float
+          const float = $(`.calendar-items[data-day="${i}"]`);
+          const first = $(`.day-row[data-day="${i}"]:first`);
+
+          // set min width
+          first.css('min-width', `${this.getWidth(day, i) * 5}rem`);
+        });
+        this.state.days.forEach((day, i) => {
+          // get day float
+          const float = $(`.calendar-items[data-day="${i}"]`);
+          const first = $(`.day-row[data-day="${i}"]:first`);
+
+          // get width
+          let left = $('.table-calendar tr:first > th:first').outerWidth();
+          const width = first.outerWidth();
+
+          // loop
+          for (let ia = 0; ia < i; ia++) {
+            // add to left
+            left += $(`.day-row[data-day="${ia}"]:first`).outerWidth();
+          }
+
+          // set height
+          float.css('left', left);
+          float.width(width);
+        });
       }
 
       // ////////////////////////////////////////////////////////////////////////////
@@ -228,4 +400,22 @@
       }
     }
   </script>
+
+  <style>
+    .calendar-items {
+      top      : 0;
+      bottom   : 0;
+      position : absolute;
+    }
+    .calendar-table-bottom {
+      position : relative;
+    }
+    .card-task {
+      height : 100%;
+    }
+    .calendar-task-wrap {
+      padding  : .25rem;
+      position : absolute;
+    }
+  </style>
 </calendar-week>

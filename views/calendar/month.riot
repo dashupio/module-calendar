@@ -14,7 +14,7 @@
             <td each={ (day, a) in week } class={ `${day.disable ? 'bg-disabled' : ''} ${isToday(day.date) ? 'bg-active' : ''}` }>
               <div class="day-number"><span>{ day.number }</span></div>
 
-              <calendar-month-row each={ (item, i) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } item={ item } page={ props.page } date={ props.date } start={ day.date } end={ moment(day.date).add(1, 'days').toDate() } on-item={ props.onItem } />
+              <calendar-task each={ (item, a) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } data-id={ item.get('_id') } item={ item } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item) } body-class="card-body px-2 py-1" { ...getProps() } />
             </td>
           </tr>
         </tbody>
@@ -28,7 +28,7 @@
     import PerfectScrollbar from 'perfect-scrollbar';
 
     // import components
-    import calendarMonthRow from './month/row.riot';
+    import calendarTask from './task.riot';
 
     // export default
     export default class CalendarMonth {
@@ -39,7 +39,7 @@
       static get components() {
         // return components
         return {
-          calendarMonthRow,
+          calendarTask,
         };
       }
 
@@ -128,6 +128,26 @@
         
         // return weeks
         return weeks;
+      }
+
+      /**
+       * get props
+       */
+      getProps() {
+        // clone
+        const newProps = { ...(this.props) };
+
+        // delete
+        delete newProps.ref;
+        delete newProps.type;
+        delete newProps.item;
+        delete newProps.view;
+        delete newProps.class;
+        delete newProps.struct;
+        delete newProps.onItem;
+
+        // return
+        return newProps;
       }
 
       /**
