@@ -14,7 +14,7 @@
             <td each={ (day, a) in week } class={ `${day.disable ? 'bg-disabled' : ''} ${isToday(day.date) ? 'bg-active' : ''}` }>
               <div class="day-number"><span>{ day.number }</span></div>
 
-              <calendar-task each={ (item, a) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } data-id={ item.get('_id') } item={ item } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item) } body-class="card-body px-2 py-1" { ...getProps() } />
+              <calendar-task each={ (item, a) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } body-class="card-body px-2 py-1" { ...getProps() } />
             </td>
           </tr>
         </tbody>

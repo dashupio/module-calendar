@@ -30,7 +30,7 @@
         </table>
 
         <div class="calendar-items" each={ (day, i) in state.days } data-day={ i }>
-          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i) } data-id={ item.get('_id') } item={ item } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item) } { ...getProps() } />
+          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
         </div>
       </div>
     </div>
@@ -175,8 +175,7 @@
         const form = this.props.dashup.page(this.props.page.get('data.form'));
 
         // start/end fields
-        const endField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
-        const startField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
+        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
 
         // width starts at 1
         let width = 1;
@@ -184,16 +183,16 @@
         // loop items
         for (let it = 0; it < items.length; it++) {
           // reset pos
-          items[it].set(`_pos.${i}.right`, 0);
+          items[it][1].set(`_pos.${i}.right`, 0);
 
           // check prev
           if (!items[it - 1]) continue;
 
           // start/end
-          let Lend   = new Date(items[it - 1].get(startField.name || startField.uuid));
-          let Lstart = new Date(items[it - 1].get(endField.name || endField.uuid));
-          let Rend   = new Date(items[it].get(startField.name || startField.uuid));
-          let Rstart = new Date(items[it].get(endField.name || endField.uuid));
+          let Lend   = items[it - 1][0].end.toDate();
+          let Lstart = items[it - 1][0].start.toDate();
+          let Rend   = items[it][0].end.toDate();
+          let Rstart = items[it][0].start.toDate();
 
           if (Lstart < moment(date).startOf('week').add(i, 'days').toDate()) {
             Lstart = moment(date).startOf('week').add(i, 'days').toDate();
@@ -213,8 +212,8 @@
             width = width + 1;
 
             // pos left
-            items[it].set(`_pos.${i}.left`, (items[it - 1].get(`_pos.${i}.left`) || 0) + 1);
-            items[it - 1].set(`_pos.${i}.right`, (items[it - 1].get(`_pos.${i}.right`) || 0) + 1);
+            items[it][1].set(`_pos.${i}.left`, (items[it - 1][1].get(`_pos.${i}.left`) || 0) + 1);
+            items[it - 1][1].set(`_pos.${i}.right`, (items[it - 1][1].get(`_pos.${i}.right`) || 0) + 1);
           }
         }
 
@@ -256,16 +255,12 @@
       /**
        * get item position
        */
-      getPosition(item, i) {
+      getPosition([range, item], i) {
         // date
         const date = this.props.date || new Date();
 
         // form
         const form = this.props.dashup.page(this.props.page.get('data.form'));
-
-        // get start/end
-        const end   = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
-        const start = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
 
         // seconds
         let endTime = moment(date).startOf('week').add(i + 1, 'days').toDate().getTime();
@@ -273,8 +268,8 @@
         let totalSeconds = endTime - startTime;
 
         // item start
-        let itemEnd = new Date(item.get(end.name || end.uuid) || new Date()).getTime();
-        let itemStart = new Date(item.get(start.name || start.uuid) || new Date()).getTime();
+        let itemEnd = range.end.toDate();
+        let itemStart = range.start.toDate();
 
         // set start
         if (item.get('_change.start') && itemStart < startTime) {
@@ -307,8 +302,6 @@
         // 100% width
         let left = 0;
         let width = 100;
-
-        console.log(item.get(`_pos.${i}`))
 
         if (item.get(`_pos.${i}.right`) || item.get(`_pos.${i}.left`)) {
           width = width / ((item.get(`_pos.${i}.right`) || 0) + (item.get(`_pos.${i}.left`) || 0) + 1);

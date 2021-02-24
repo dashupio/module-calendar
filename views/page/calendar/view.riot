@@ -8,27 +8,27 @@
       <i class="fa fa-exclamation-triangle mr-2" />
       Please select a <b>form</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.start') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.date') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
-      Please select a <b>start field</b> for the calendar.
-    </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.end') } onclick={ (e) => props.onConfig(e) }>
-      <i class="fa fa-exclamation-triangle mr-2" />
-      Please select a <b>end field</b> for the calendar.
+      Please select a <b>date field</b> for the calendar.
     </a>
 
-    <div if={ props.page.get('data.start') && props.page.get('data.end') && !loading('calendar') }>
+    <div if={ props.page.get('data.date') && !loading('calendar') }>
       <calendar-week if={ props.page.get('user.calendar') === 'week' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
       <calendar-month if={ !props.page.get('user.calendar') || props.page.get('user.calendar') === 'month' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
     </div>
-    <div if={ props.page.get('data.start') && props.page.get('data.end') && loading('calendar') } class="text-center my-5 py-5">
+    <div if={ props.page.get('data.date') && loading('calendar') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
     </div>
   </div>
 
   <script>
     // require base class
-    import moment from 'moment';
+    import Moment from 'moment';
+    import { extendMoment } from 'moment-range';
+
+    // extend
+    const moment = extendMoment(Moment);
 
     // day week month
     import calendarWeek from '../../calendar/week';
@@ -259,8 +259,7 @@
         }
 
         // get start/end
-        const end   = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
-        const start = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
+        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
 
         // start end date
         let endDate   = null;
@@ -282,8 +281,28 @@
         }
 
         // add where
-        query = query.gte(end.name || end.uuid, startDate);
-        query = query.lte(start.name || start.uuid, endDate);
+        query = query.or({
+          [`${dateField.name || dateField.uuid}.end`] : {
+            $lt : endDate,
+          },
+          [`${dateField.name || dateField.uuid}.start`] : {
+            $gt : startDate,
+          },
+        }, {
+          [`${dateField.name || dateField.uuid}.repeat`] : true,
+          [`${dateField.name || dateField.uuid}.until`] : null,
+          [`${dateField.name || dateField.uuid}.start`] : {
+            $gt : startDate,
+          },
+        }, {
+          [`${dateField.name || dateField.uuid}.repeat`] : true,
+          [`${dateField.name || dateField.uuid}.until`] : {
+            $lt : endDate,
+          },
+          [`${dateField.name || dateField.uuid}.start`] : {
+            $gt : startDate,
+          },
+        });
 
         // return query
         return query;
@@ -295,6 +314,9 @@
        * @param {String} col
        */
       getItems(start, end) {
+        // get check range
+        const range = moment.range(start, end);
+
         // check frontend
         if (!this.state.data) return [];
         if (typeof window === 'undefined') return [];
@@ -303,32 +325,76 @@
         const form = this.props.dashup.page(this.props.page.get('data.form'));
 
         // start/end fields
-        const endField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.start'));
-        const startField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.end'));
+        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
 
         // check end/start
-        if (!endField || !startField) return [];
+        if (!dateField) return [];
 
         // keys
-        const endKey = endField.name || endField.uuid;
-        const startKey = startField.name || startField.uuid;
+        const dateKey = dateField.name || dateField.uuid;
 
         // return queries
-        return [...(this.state.data)].filter((row) => {
-          // get values
-          const rowEnd = new Date(row.get(endKey) || 0);
-          const rowStart = new Date(row.get(startKey) || 0);
+        return [...(this.state.data)].reduce((accum, row) => {
+          // get date
+          const dateValue = row.get(dateKey);
 
-          // check ends within or starts within
-          if (rowStart >= end && rowEnd <= start) return true;
-        }).sort((a, b) => {
+          // start/end
+          let rowEnd     = new Date(dateValue.end || 0);
+          let rowUntil   = ((dateValue.rep || {}).ends || 'forever') !== 'forever' && !isNaN(new Date(dateValue.until).getTime()) ? new Date(dateValue.until) : null;
+          const rowStart = new Date(dateValue.start || 0);
+
+          // end
+          if (!dateValue.end && dateValue.duration) {
+            // duration add
+            rowEnd = new Date(rowStart.getTime() + dateValue.duration);
+          }
+
+          // check repeat
+          if (!dateValue.repeat || !dateValue.rep || !dateValue.rep.period) {
+            // range
+            const subRange = moment.range(rowStart, rowEnd);
+
+            // check ends within or starts within
+            if (range.overlaps(subRange)) {
+              // push row
+              accum.push([subRange, row]);
+              return accum;
+            }
+          }
+
+          // check until
+          if (rowUntil && rowUntil < end) return accum;
+
+          // next date
+          let next = moment(rowStart);
+
+          // chech while
+          while (next.toDate() < end) {
+            // get end
+            const nextEnd = new Date(next.toDate().getTime() + (dateValue.duration || 0));
+            const subRange = moment.range(next.toDate(), nextEnd);
+
+            // check ends within or starts within
+            if (range.overlaps(subRange)) {
+              // return accum
+              accum.push([subRange, row]);
+              return accum;
+            }
+
+            // add
+            next.add(dateValue.rep.amount || 1, dateValue.rep.period || 'minute');
+          }
+
+          // fail
+          return accum;
+        }, []).sort(([a], [b]) => {
           // sort order
-          const aC = new Date(a.get(startKey) || 0);
-          const bC = new Date(b.get(startKey) || 0);
+          const aS = a.start.toDate();
+          const bS = b.start.toDate();
 
           // check order
-          if (bC > aC) return -1;
-          if (bC < aC) return 1;
+          if (bS > aS) return -1;
+          if (bS < aS) return 1;
           return 0;
         });
       }
