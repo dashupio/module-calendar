@@ -338,6 +338,9 @@
           // get date
           const dateValue = row.get(dateKey);
 
+          // return
+          if (!dateValue || !(typeof dateValue === 'object')) return accum;
+
           // start/end
           let rowEnd     = new Date(dateValue.end || 0);
           let rowUntil   = ((dateValue.rep || {}).ends || 'forever') !== 'forever' && !isNaN(new Date(dateValue.until).getTime()) ? new Date(dateValue.until) : null;
@@ -358,8 +361,10 @@
             if (range.overlaps(subRange)) {
               // push row
               accum.push([subRange, row]);
-              return accum;
             }
+
+            // return accum
+            return accum;
           }
 
           // check until

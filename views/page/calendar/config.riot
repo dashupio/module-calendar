@@ -192,7 +192,7 @@
        */
       getDate() {
         // return value
-        return this.props.context.fields.map((field) => {
+        return [...(this.props.context.fields)].filter((field) => ['date'].includes(field.type)).map((field) => {
           // return value
           return {
             name     : field.label,

@@ -30,7 +30,7 @@
         </table>
 
         <div class="calendar-items" each={ (day, i) in state.days } data-day={ i }>
-          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
+          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i, a, day) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
         </div>
       </div>
     </div>
@@ -156,69 +156,9 @@
 
         // get items
         return this.props.getItems(
-          moment(date).startOf('week').add(i, 'days').toDate(),
-          moment(date).startOf('week').add((i + 1), 'days').toDate()
+          moment(date).startOf('week').add(i + 1, 'days').toDate(),
+          moment(date).startOf('week').endOf('day').add(i + 1, 'days').toDate()
         );
-      }
-
-      /**
-       * get width
-       */
-      getWidth(day, i) {
-        // date
-        const date = this.props.date || new Date();
-        
-        // get items
-        const items = this.getItems(day, i);
-
-        // get form
-        const form = this.props.dashup.page(this.props.page.get('data.form'));
-
-        // start/end fields
-        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
-
-        // width starts at 1
-        let width = 1;
-
-        // loop items
-        for (let it = 0; it < items.length; it++) {
-          // reset pos
-          items[it][1].set(`_pos.${i}.right`, 0);
-
-          // check prev
-          if (!items[it - 1]) continue;
-
-          // start/end
-          let Lend   = items[it - 1][0].end.toDate();
-          let Lstart = items[it - 1][0].start.toDate();
-          let Rend   = items[it][0].end.toDate();
-          let Rstart = items[it][0].start.toDate();
-
-          if (Lstart < moment(date).startOf('week').add(i, 'days').toDate()) {
-            Lstart = moment(date).startOf('week').add(i, 'days').toDate();
-          }
-          if (Rstart < moment(date).startOf('week').add(i, 'days').toDate()) {
-            Rstart = moment(date).startOf('week').add(i, 'days').toDate();
-          }
-          if (Lend > moment(date).startOf('week').add(i + 1, 'days').toDate()) {
-            Lend = moment(date).startOf('week').add(i + 1, 'days').toDate();
-          }
-          if (Rend > moment(date).startOf('week').add(i + 1, 'days').toDate()) {
-            Rend = moment(date).startOf('week').add(i + 1, 'days').toDate();
-          }
-
-          // check end overlaps
-          if (Lstart <= Rend || Lend <= Rstart) {
-            width = width + 1;
-
-            // pos left
-            items[it][1].set(`_pos.${i}.left`, (items[it - 1][1].get(`_pos.${i}.left`) || 0) + 1);
-            items[it - 1][1].set(`_pos.${i}.right`, (items[it - 1][1].get(`_pos.${i}.right`) || 0) + 1);
-          }
-        }
-
-        // return width
-        return width;
       }
 
       /**
@@ -255,16 +195,40 @@
       /**
        * get item position
        */
-      getPosition([range, item], i) {
+      getPosition([range, item], i, a, day) {
         // date
-        const date = this.props.date || new Date();
+        const date  = this.props.date || new Date();
+        const items = this.getItems(day, i);
 
         // form
         const form = this.props.dashup.page(this.props.page.get('data.form'));
 
+        // get total overlaps
+        const totalOverlaps = items.reduce((accum, [sub]) => {
+          // return overlaps
+          if (range.overlaps(sub)) accum = accum + 1;
+
+          // return accum
+          return accum;
+        }, 0);
+        let a2 = 0;
+        const leftOverlaps = items.reduce((accum, [sub]) => {
+          // return accum
+          if (a2 >= a) return accum;
+
+          // return overlaps
+          if (range.overlaps(sub)) accum = accum + 1;
+          
+          // a2
+          a2++;
+
+          // return accum
+          return accum;
+        }, 0);
+
         // seconds
-        let endTime = moment(date).startOf('week').add(i + 1, 'days').toDate().getTime();
-        let startTime = moment(date).startOf('week').add(i, 'days').toDate().getTime();
+        let endTime = moment(date).startOf('week').add(i  + 1, 'days').endOf('day').toDate().getTime();
+        let startTime = moment(date).startOf('week').add(i + 1, 'days').startOf('day').toDate().getTime();
         let totalSeconds = endTime - startTime;
 
         // item start
@@ -299,16 +263,9 @@
         if (top < 0) top = 0;
         if (height > (100 - top)) height = (100 - top);
 
-        // 100% width
-        let left = 0;
-        let width = 100;
-
-        if (item.get(`_pos.${i}.right`) || item.get(`_pos.${i}.left`)) {
-          width = width / ((item.get(`_pos.${i}.right`) || 0) + (item.get(`_pos.${i}.left`) || 0) + 1);
-        }
-        if (item.get(`_pos.${i}.left`)) {
-          left = 100 / (item.get(`_pos.${i}.left`) + 1);
-        }
+        // set left
+        const width = 100 / totalOverlaps;
+        const left = width * leftOverlaps;
 
         // return
         return `top: ${top.toFixed(2)}%; height: ${height.toFixed(2)}%; width: ${width}%; left:${left}%`;
@@ -318,15 +275,6 @@
        * set position
        */
       setPosition() {
-        // loop days
-        this.state.days.forEach((day, i) => {
-          // get day float
-          const float = $(`.calendar-items[data-day="${i}"]`);
-          const first = $(`.day-row[data-day="${i}"]:first`);
-
-          // set min width
-          first.css('min-width', `${this.getWidth(day, i) * 5}rem`);
-        });
         this.state.days.forEach((day, i) => {
           // get day float
           const float = $(`.calendar-items[data-day="${i}"]`);
