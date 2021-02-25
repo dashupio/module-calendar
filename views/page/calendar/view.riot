@@ -292,15 +292,15 @@
           [`${dateField.name || dateField.uuid}.repeat`] : true,
           [`${dateField.name || dateField.uuid}.until`] : null,
           [`${dateField.name || dateField.uuid}.start`] : {
-            $gt : startDate,
+            $lt : endDate,
           },
         }, {
           [`${dateField.name || dateField.uuid}.repeat`] : true,
           [`${dateField.name || dateField.uuid}.until`] : {
-            $lt : endDate,
+            $gt : endDate,
           },
           [`${dateField.name || dateField.uuid}.start`] : {
-            $gt : startDate,
+            $lt : endDate,
           },
         });
 
