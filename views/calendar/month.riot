@@ -14,7 +14,9 @@
             <td each={ (day, a) in week } class={ `${day.disable ? 'bg-disabled' : ''} ${isToday(day.date) ? 'bg-active' : ''}` }>
               <div class="day-number"><span>{ day.number }</span></div>
 
-              <calendar-task each={ (item, a) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } body-class="card-body px-2 py-1" { ...getProps() } />
+              <div>
+                <calendar-task each={ (item, a) in props.getItems(day.date, moment(day.date).add(1, 'days').toDate()) } data-id={ item[1].get('_id') } item={ item[1] } model={ item[2] } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
+              </div>
             </td>
           </tr>
         </tbody>
@@ -138,6 +140,7 @@
         const newProps = { ...(this.props) };
 
         // delete
+        delete newProps.is;
         delete newProps.ref;
         delete newProps.type;
         delete newProps.item;

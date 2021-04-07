@@ -1,5 +1,5 @@
 <calendar-task>
-  <div if={ !props.item.get('archived') } class={ `card card-sm card-of card-task card-${getColor()}` } onclick={ (e) => onClick(e) } data-id={ props.item.get('_id') } id={ `task-${props.item.get('_id')}` } if={ !loading('backlog') }>
+  <div if={ !props.item.get('archived') } class={ `card card-sm card-of card-task card-${getColor()}${getBackground()}` } onclick={ (e) => onClick(e) } data-id={ props.item.get('_id') } id={ `task-${props.item.get('_id')}` } if={ !loading('backlog') }>
     <div class="resize-left" />
     <div class="resize-right" />
     <div if={ getColor() } class="color-strip" />
@@ -16,7 +16,7 @@
     </div>
 
     <div class={ `${props.bodyClass || 'card-body'} ${hasTags() ? ' pt-2' : ''}` }>
-      <hbs template={ props.page.get('data.display') || '' } data={ props.item ? props.item.toJSON() : {} } />
+      <hbs template={ props.model.display || '' } data={ props.item ? props.item.toJSON() : {} } />
     </div>
 
     <div class="card-footer tags p-2 pt-1 dropdown" if={ hasUser() }>
@@ -118,17 +118,45 @@
       }
 
       /**
+       * get background
+       */
+      getBackground() {
+        // check color
+        if (!this.props.model.color) return;
+
+        // return color
+        return ` bg-${this.props.model.color}-transparent`;
+      }
+
+      /**
+       * get fields
+       */
+      getFields() {
+        // get form
+        const form = this.props.model.form;
+
+        // check form
+        if (!form) return [];
+
+        // return page
+        const page = this.props.dashup.page(form);
+
+        // return fields
+        return page ? (page.get('data.fields') || []) : [];
+      }
+
+      /**
        * get types
        */
       getTagTypes() {
         // set types
-        let types = (this.props.page.get('data.tag') || []);
+        let types = (this.props.model.tag || []);
         if (!Array.isArray(types)) types = [types];
 
         // return fields
         return types.map((type) => {
           // return type
-          return (this.props.formFields || []).find((f) => f.uuid === type);
+          return this.getFields().find((f) => f.uuid === type);
         });
       }
 
@@ -137,13 +165,13 @@
        */
       getUserTypes() {
         // set types
-        let types = (this.props.page.get('data.user') || []);
+        let types = (this.props.model.user || []);
         if (!Array.isArray(types)) types = [types];
 
         // return fields
         return types.map((type) => {
           // return type
-          return (this.props.formFields || []).find((f) => f.uuid === type);
+          return this.getFields().find((f) => f.uuid === type);
         });
       }
 
@@ -214,7 +242,7 @@
        */
       hasTags() {
         // tag uuid
-        return (this.props.page.get('data.tag') || []).length;
+        return (this.props.model.tag || []).length;
       }
 
       /**
@@ -222,7 +250,7 @@
        */
       hasUser() {
         // tag uuid
-        return (this.props.page.get('data.user') || []).length;
+        return (this.props.model.user || []).length;
       }
 
       /**

@@ -1,23 +1,23 @@
 <page-calendar-view>
   <div>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.model') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.models.0.model') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
-      Please select a <b>model</b> for the calendar.
+      Please select at least one <b>model</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.form') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.models.0.form') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
-      Please select a <b>form</b> for the calendar.
+      Please select at least one <b>form</b> for the calendar.
     </a>
-    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.date') } onclick={ (e) => props.onConfig(e) }>
+    <a href="#!" class="d-block alert alert-info mb-3" if={ !props.page.get('data.models.0.date') } onclick={ (e) => props.onConfig(e) }>
       <i class="fa fa-exclamation-triangle mr-2" />
-      Please select a <b>date field</b> for the calendar.
+      Please select at least one <b>date field</b> for the calendar.
     </a>
 
-    <div if={ props.page.get('data.date') && !loading('calendar') }>
+    <div if={ props.page.get('data.models.0.date') && !loading('calendar') }>
       <calendar-week if={ props.page.get('user.calendar') === 'week' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
       <calendar-month if={ !props.page.get('user.calendar') || props.page.get('user.calendar') === 'month' } ref={ ref('calendar') } get-items={ (s, e) => getItems(s, e) } { ...props } />
     </div>
-    <div if={ props.page.get('data.date') && loading('calendar') } class="text-center my-5 py-5">
+    <div if={ props.page.get('data.models.0.date') && loading('calendar') } class="text-center my-5 py-5">
       <i class="fa fa-spin fa-spinner h1" />
     </div>
   </div>
@@ -54,6 +54,7 @@
       onBeforeMount(...args) {
         // bind init
         this.init = this.init.bind(this);
+        this.getQuery = this.getQuery.bind(this);
 
         // check frontend
         if (typeof window === 'undefined') return;
@@ -64,11 +65,9 @@
         };
 
         // add listeners
-        this.props.page.on('do.data.form', this.init);
-        this.props.page.on('do.data.model', this.init);
         this.props.page.on('do.user.where', this.init);
         this.props.page.on('do.user.filter', this.init);
-        this.props.page.on('do.data.filter', this.init);
+        this.props.page.on('do.data.models', this.init);
         this.props.page.on('do.user.calendar', this.init);
       }
 
@@ -80,18 +79,20 @@
         if (typeof window === 'undefined') return;
 
         // add listeners
-        this.props.page.removeListener('do.data.form', this.init);
-        this.props.page.removeListener('do.data.model', this.init);
         this.props.page.removeListener('do.user.where', this.init);
         this.props.page.removeListener('do.user.filter', this.init);
-        this.props.page.removeListener('do.data.filter', this.init);
+        this.props.page.removeListener('do.data.models', this.init);
         this.props.page.removeListener('do.user.calendar', this.init);
 
-        // remove item listeners
-        if (this.state.data) {
-          this.state.data.deafen();
-          this.state.data.removeListener('update', this.safeUpdate);
-        }
+        // check data
+        if (this.state.datas) this.state.datas.forEach((data) => {
+          // check data
+          if (!data || !data.deafen) return;
+
+          // data
+          data.deafen();
+          data.removeListener('update', this.safeUpdate);
+        });
       }
 
       /**
@@ -138,10 +139,33 @@
        * init
        */
       async init() {
+        // current
+        if (!this.shownFirst && this.props.current) {
+          // shown first
+          this.shownFirst = true;
+
+          // on current
+          this.props.onItem(null, this.props.current);
+        }
+
+        // check legacy
+        if (this.props.page.get('data.model') && !this.props.page.get('data.models.0')) {
+          // set data
+          await this.props.data('models', [{
+            tag     : this.props.page.get('data.tag'),
+            form    : this.props.page.get('data.form'),
+            user    : this.props.page.get('data.user'),
+            date    : this.props.page.get('data.date'),
+            model   : this.props.page.get('data.model'),
+            filter  : this.props.page.get('data.filter'),
+            display : this.props.page.get('data.display'),
+          }]);
+        }
+
         // check
         if (this.initializing) return;
-        if (!this.props.page.get('data.form')) return;
-        if (!this.props.page.get('data.model')) return;
+        if (!this.props.page.get('data.models.0.form')) return;
+        if (!this.props.page.get('data.models.0.model')) return;
 
         // initializing
         this.initializing = true;
@@ -152,26 +176,36 @@
         });
 
         // check data
-        if (this.state.data) {
-          this.state.data.deafen();
-          this.state.data.removeListener('update', this.safeUpdate);
-        }
+        if (this.state.datas) this.state.datas.forEach((data) => {
+          // check data
+          if (!data || !data.deafen) return;
+
+          // data
+          data.deafen();
+          data.removeListener('update', this.safeUpdate);
+        });
 
         // find data
-        const query = this.getQuery();
+        const queries = (this.props.page.get('data.models') || []).map(this.getQuery);
 
         // find
-        const data = await query.listen();
+        const datas = await Promise.all(queries.map(async (query) => {
+          // return query
+          return query && query.listen ? await query.listen() : [];
+        }));
 
         // loading
         this.update({
-          data,
+          datas,
 
           loading : false,
         });
 
         // safe update
-        data.on('update', this.safeUpdate);
+        datas.forEach((data) => {
+          // check data
+          if (data && data.on) data.on('update', this.safeUpdate);
+        });
 
         // unset
         this.initializing = false;
@@ -187,23 +221,23 @@
       /**
        * get query
        */
-      getQuery() {
+      getQuery(opts) {
         // get form
-        const form = this.props.dashup.page(this.props.page.get('data.form'));
+        const form = this.props.dashup.page(opts.form);
         const calendar = this.props.page.get('user.calendar') || 'month';
 
         // set query
-        let query = this.props.dashup.page(this.props.page.get('data.model'));
+        let query = this.props.dashup.page(opts.model);
 
         // loop forms
-        query = query.in('_meta.form', [this.props.page.get('data.form')]);
+        query = query.in('_meta.form', [opts.form]);
 
         // load filter
         let filter = null;
 
         // try/catch
         try {
-          filter = JSON.parse(this.props.page.get('data.filter'));
+          filter = JSON.parse(opts.filter);
         } catch (e) {}
 
         // add initial where
@@ -224,10 +258,13 @@
         // test by user
         if ((this.props.page.get('user.filter') || {}).me) {
           // get user fields
-          const userFields = [...(form.get('data.fields') || [])].filter((f) => (this.props.page.get('data.user') || []).includes(f.uuid));
+          const userFields = [...(form.get('data.fields') || [])].filter((f) => (opts.user || []).includes(f.uuid));
           
           // loop fields
           query = query[userFields.length > 1 ? 'or' : 'where'](...(userFields.map((userField) => {
+            // check user field
+            if (!userField) return;
+
             // return or
             return {
               [userField.name || userField.uuid] : this.props.dashup.get('_meta.member'),
@@ -247,10 +284,13 @@
         // get filter tags
         if ((this.props.page.get('user.filter.tags') || []).length) {
           // check vals
-          const tagFields = [...(form.get('data.fields') || [])].filter((f) => (this.props.page.get('data.tag') || []).includes(f.uuid));
+          const tagFields = [...(form.get('data.fields') || [])].filter((f) => (opts.tag || []).includes(f.uuid));
 
           // loop fields
           query = query[tagFields.length > 1 ? 'or' : 'where'](...(tagFields.map((tagField) => {
+            // check tag field
+            if (!tagField) return;
+
             // return or
             return {
               [tagField.name || tagField.uuid] : this.props.page.get('user.filter.tags')
@@ -259,7 +299,10 @@
         }
 
         // get start/end
-        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
+        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === opts.date);
+
+        // date field
+        if (!dateField) return [];
 
         // start end date
         let endDate   = null;
@@ -297,7 +340,7 @@
         }, {
           [`${dateField.name || dateField.uuid}.repeat`] : true,
           [`${dateField.name || dateField.uuid}.until`] : {
-            $gt : endDate,
+            $gt : startDate,
           },
           [`${dateField.name || dateField.uuid}.start`] : {
             $lt : endDate,
@@ -318,81 +361,87 @@
         const range = moment.range(start, end);
 
         // check frontend
-        if (!this.state.data) return [];
+        if (!this.state.datas) return [];
         if (typeof window === 'undefined') return [];
 
-        // get form
-        const form = this.props.dashup.page(this.props.page.get('data.form'));
+        // loop datas
+        const filtered = [].concat(...((this.props.page.get('data.models') || []).map((model, i) => {
+          // check model
+          if (!model) return [];
 
-        // start/end fields
-        const dateField = (form.get('data.fields') || []).find((f) => f.uuid === this.props.page.get('data.date'));
+          // get form
+          const form = this.props.dashup.page(model.form);
 
-        // check end/start
-        if (!dateField) return [];
+          // start/end fields
+          const dateField = (form.get('data.fields') || []).find((f) => f.uuid === model.date);
 
-        // keys
-        const dateKey = dateField.name || dateField.uuid;
+          // check end/start
+          if (!dateField) return [];
 
-        // return queries
-        return [...(this.state.data)].reduce((accum, row) => {
-          // get date
-          const dateValue = row.get(dateKey);
+          // keys
+          const dateKey = dateField.name || dateField.uuid;
 
-          // return
-          if (!dateValue || !(typeof dateValue === 'object')) return accum;
+          // return queries
+          return [...(this.state.datas[i])].reduce((accum, row) => {
+            // get date
+            const dateValue = row.get(dateKey);
 
-          // start/end
-          let rowEnd     = new Date(dateValue.end || 0);
-          let rowUntil   = ((dateValue.rep || {}).ends || 'forever') !== 'forever' && !isNaN(new Date(dateValue.until).getTime()) ? new Date(dateValue.until) : null;
-          const rowStart = new Date(dateValue.start || 0);
+            // return
+            if (!dateValue || !(typeof dateValue === 'object')) return accum;
 
-          // end
-          if (!dateValue.end && dateValue.duration) {
-            // duration add
-            rowEnd = new Date(rowStart.getTime() + dateValue.duration);
-          }
+            // start/end
+            let rowEnd     = new Date(dateValue.end || 0);
+            let rowUntil   = ((dateValue.rep || {}).ends || 'forever') !== 'forever' && !isNaN(new Date(dateValue.until).getTime()) ? new Date(dateValue.until) : null;
+            const rowStart = new Date(dateValue.start || 0);
 
-          // check repeat
-          if (!dateValue.repeat || !dateValue.rep || !dateValue.rep.period) {
-            // range
-            const subRange = moment.range(rowStart, rowEnd);
-
-            // check ends within or starts within
-            if (range.overlaps(subRange)) {
-              // push row
-              accum.push([subRange, row]);
+            // end
+            if (!dateValue.end && dateValue.duration) {
+              // duration add
+              rowEnd = new Date(rowStart.getTime() + dateValue.duration);
             }
 
-            // return accum
-            return accum;
-          }
+            // check repeat
+            if (!dateValue.repeat || !dateValue.rep || !dateValue.rep.period) {
+              // range
+              const subRange = moment.range(rowStart, rowEnd);
 
-          // check until
-          if (rowUntil && rowUntil < end) return accum;
+              // check ends within or starts within
+              if (range.overlaps(subRange)) {
+                // push row
+                accum.push([subRange, row, model]);
+              }
 
-          // next date
-          let next = moment(rowStart);
-
-          // chech while
-          while (next.toDate() < end) {
-            // get end
-            const nextEnd = new Date(next.toDate().getTime() + (dateValue.duration || 0));
-            const subRange = moment.range(next.toDate(), nextEnd);
-
-            // check ends within or starts within
-            if (range.overlaps(subRange)) {
               // return accum
-              accum.push([subRange, row]);
               return accum;
             }
 
-            // add
-            next.add(dateValue.rep.amount || 1, dateValue.rep.period || 'minute');
-          }
+            // check until
+            if (rowUntil && rowUntil < end) return accum;
 
-          // fail
-          return accum;
-        }, []).sort(([a], [b]) => {
+            // next date
+            let next = moment(rowStart);
+
+            // chech while
+            while (next.toDate() < end) {
+              // get end
+              const nextEnd = new Date(next.toDate().getTime() + (dateValue.duration || 0));
+              const subRange = moment.range(next.toDate(), nextEnd);
+
+              // check ends within or starts within
+              if (range.overlaps(subRange)) {
+                // return accum
+                accum.push([subRange, row, model]);
+                return accum;
+              }
+
+              // add
+              next.add(dateValue.rep.amount || 1, dateValue.rep.period || 'minute');
+            }
+
+            // fail
+            return accum;
+          }, []);
+        }))).sort(([a], [b]) => {
           // sort order
           const aS = a.start.toDate();
           const bS = b.start.toDate();
@@ -402,6 +451,9 @@
           if (bS < aS) return 1;
           return 0;
         });
+
+        // return filtered
+        return filtered;
       }
 
 

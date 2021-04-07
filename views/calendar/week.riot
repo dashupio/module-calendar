@@ -30,7 +30,7 @@
         </table>
 
         <div class="calendar-items" each={ (day, i) in state.days } data-day={ i }>
-          <div is="calendar-task" class="calendar-task-wrap" each={ (item, a) in getItems(day, i) } style={ getPosition(item, i, a, day) } data-id={ item[1].get('_id') } item={ item[1] } form-fields={ props.context.fields } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
+          <div each={ (item, a) in getItems(day, i) } is="calendar-task" class="calendar-task-wrap" style={ getPosition(item, i, a, day) } data-id={ item[1].get('_id') } item={ item[1] } model={ item[2] } on-item={ (e) => props.onItem(e, item[1]) } { ...getProps() } />
         </div>
       </div>
     </div>
@@ -169,6 +169,7 @@
         const newProps = { ...(this.props) };
 
         // delete
+        delete newProps.is;
         delete newProps.ref;
         delete newProps.type;
         delete newProps.item;
@@ -195,13 +196,10 @@
       /**
        * get item position
        */
-      getPosition([range, item], i, a, day) {
+      getPosition([range, item, model], i, a, day) {
         // date
         const date  = this.props.date || new Date();
         const items = this.getItems(day, i);
-
-        // form
-        const form = this.props.dashup.page(this.props.page.get('data.form'));
 
         // get total overlaps
         const totalOverlaps = items.reduce((accum, [sub]) => {
