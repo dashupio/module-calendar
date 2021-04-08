@@ -151,7 +151,7 @@
         // check legacy
         if (this.props.page.get('data.model') && !this.props.page.get('data.models.0')) {
           // set data
-          await this.props.data('models', [{
+          this.props.page.set('data.models', [{
             tag     : this.props.page.get('data.tag'),
             form    : this.props.page.get('data.form'),
             user    : this.props.page.get('data.user'),
@@ -160,6 +160,7 @@
             filter  : this.props.page.get('data.filter'),
             display : this.props.page.get('data.display'),
           }]);
+          await this.props.data('models', this.props.page.get('data.models'));
         }
 
         // check
@@ -222,12 +223,18 @@
        * get query
        */
       getQuery(opts) {
+        // check form/model
+        if (!opts.form || !opts.model) return null;
+
         // get form
         const form = this.props.dashup.page(opts.form);
         const calendar = this.props.page.get('user.calendar') || 'month';
 
         // set query
         let query = this.props.dashup.page(opts.model);
+
+        // check model
+        if (!query || !form) return;
 
         // loop forms
         query = query.in('_meta.form', [opts.form]);
@@ -367,7 +374,7 @@
         // loop datas
         const filtered = [].concat(...((this.props.page.get('data.models') || []).map((model, i) => {
           // check model
-          if (!model) return [];
+          if (!model || !model.form) return [];
 
           // get form
           const form = this.props.dashup.page(model.form);

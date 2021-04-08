@@ -249,9 +249,9 @@
       }
 
       /**
-       * on model
+       * on filter
        */
-      onFilter(val) {
+      onFilter(i, model, val) {
         // model filter
         model.filter = JSON.stringify(val);
 
@@ -345,7 +345,7 @@
        */
       getFormFields(model) {
         // return value
-        return model.form && this.props.dashup.page(model.form) ? this.props.dashup.page(model.form).get('data.fields') || [] : [];
+        return model.form && this.props.dashup.page(model.form) ? (this.props.dashup.page(model.form).get('data.fields') || []) : [];
       }
 
 
