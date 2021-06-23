@@ -45,12 +45,8 @@ export default class CalendarPage extends Struct {
   get views() {
     // return object of views
     return {
-      /*
-      view   : 'page/calendar/view',
-      menu   : 'page/calendar/menu',
-      filter : 'page/calendar/filter',
+      view   : 'page/calendar',
       config : 'page/calendar/config',
-      */
     };
   }
 
