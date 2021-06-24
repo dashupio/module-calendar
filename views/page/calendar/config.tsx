@@ -96,7 +96,7 @@ const PageCalendarConfig = (props = {}) => {
     model[key] = value;
 
     // props
-    props.setData('models', [...props.page.get('data.models')], prev);
+    props.setData('models', [...(props.page.get('data.models') || [])], prev);
   };
 
   // return jsx

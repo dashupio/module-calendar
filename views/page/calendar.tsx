@@ -42,9 +42,26 @@ const CalendarPage = (props = {}) => {
   const [date, setDate] = useState(new Date());
   const [view, setView] = useState(props.page.get('data.view') && views[props.page.get('data.view')] ? props.page.get('data.view') : 'month');
   const [sets, setSets] = useState([]);
+  const [share, setShare] = useState(false);
   const [config, setConfig] = useState(false);
   const [loading, setLoading] = useState(false);
   const [updated, setUpdated] = useState(new Date());
+  const [modalModel, setModalModel] = useState(null);
+
+  // get forms
+  const getForms = () => {
+    // reduce forms
+    return (props.page.get('data.models') || []).reduce((accum, mod) => {
+      // get forms
+      if (!accum.includes(mod.form)) accum.push(mod.form);
+
+      // return accum
+      return accum;
+    }, []).map((id) => {
+      // get form
+      return props.dashup.page(id);
+    }).filter((f) => f);
+  };
 
   // get query
   const getQuery = ({ model, form, date : field, filter, tag, user }) => {
@@ -366,16 +383,38 @@ const CalendarPage = (props = {}) => {
     props.page.get('user.search'),
     props.page.get('user.filter.me'),
     props.page.get('user.filter.tags'),
-    ...props.page.get('data.models'),
+    ...(props.page.get('data.models') || []),
   ]);
 
   // return jsx
   return (
     <Page { ...props } loading={ loading } require={ required } bodyClass="flex-column">
 
+      { !!modalModel && !!props.item && <Page.Item
+        show
+        tag={ modalModel.tag }
+        item={ props.item }
+        form={ modalModel.form }
+        user={ modalModel.user }
+        onHide={ (e) => props.setItem(null) }
+        setItem={ props.setItem }
+        getForms={ () => [modalModel.form].map((f) => props.dashup.page(f)).filter((f) => f) }
+        getField={ (id) => {
+          // return
+          if (!modalModel.form) return;
+
+          // get model
+          const fields = props.getFields([modalModel.form]);
+
+          // get field
+          return props.getField(id, fields);
+        } }
+        />
+      }
+      <Page.Share show={ share } onHide={ (e) => setShare(false) } />
       <Page.Config show={ config } onHide={ (e) => setConfig(false) } />
 
-      <Page.Menu onConfig={ () => setConfig(true) } onShare>
+      <Page.Menu onConfig={ () => setConfig(true) } presence={ props.presence } onShare={ () => setShare(true) }>
         <Dropdown>
           <Dropdown.Toggle variant="light" id="dropdown-limit" className="me-2">
             View:
@@ -392,19 +431,46 @@ const CalendarPage = (props = {}) => {
               );
             }) }
           </Dropdown.Menu>
-
-          <button className={ `btn me-1 btn-primary${isToday() ? ' disabled' : ''}` } onClick={ (e) => setDate(new Date()) }>
-            { isToday() ? 'Today' : moment(date).format('LL') }
-          </button>
-          <div className="btn-group me-2">
-            <button className="btn btn-primary" onClick={ (e) => onPrev(e) } data-toggle="tooltip" title="Previous">
-              <i className="fa fa-chevron-left" />
-            </button>
-            <button className="btn btn-primary" onClick={ (e) => onNext(e) } data-toggle="tooltip" title="Next">
-              <i className="fa fa-chevron-right" />
-            </button>
-          </div>
         </Dropdown>
+
+        <button className={ `btn me-1 btn-primary${isToday() ? ' disabled' : ''}` } onClick={ (e) => setDate(new Date()) }>
+          { isToday() ? 'Today' : moment(date).format('LL') }
+        </button>
+        <div className="btn-group me-2">
+          <button className="btn btn-primary" onClick={ (e) => onPrev(e) } data-toggle="tooltip" title="Previous">
+            <i className="fa fa-chevron-left" />
+          </button>
+          <button className="btn btn-primary" onClick={ (e) => onNext(e) } data-toggle="tooltip" title="Next">
+            <i className="fa fa-chevron-right" />
+          </button>
+        </div>
+
+        { props.dashup.can(props.page, 'submit') && !!getForms().length && (
+          <Dropdown>
+            <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
+              <i className="fat fa-plus me-2" />
+              Create
+            </Dropdown.Toggle>
+
+            <Dropdown.Menu>
+              { getForms().map((form, i) => {
+                // return jsx
+                return (
+                  <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => {
+                    // set model/form
+                    setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
+
+                    // set item
+                    props.setItem(new props.dashup.Model());
+                  } }>
+                    <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
+                    { form.get('name') }
+                  </Dropdown.Item>
+                );
+              }) }
+            </Dropdown.Menu>
+          </Dropdown>
+        ) }
         
       </Page.Menu>
       <Page.Filter onSearch={ setSearch } getFields={ getFields } onTag={ setTag } tags={ getTags() } users={ getUsers() } />
@@ -456,6 +522,10 @@ const CalendarPage = (props = {}) => {
                         page={ props.page }
                         group={ 'calendar' }
                         dashup={ props.dashup }
+                        onClick={ () => {
+                          setModalModel(subProps.event?.model);
+                          props.setItem(subProps.event.item);
+                        } }
                         template={ subProps.event.display }
                         getField={ (id) => {
                           // return
