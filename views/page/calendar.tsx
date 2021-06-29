@@ -59,7 +59,7 @@ const CalendarPage = (props = {}) => {
       return accum;
     }, []).map((id) => {
       // get form
-      return props.dashup.page(id);
+      return id && props.dashup.page(id);
     }).filter((f) => f);
   };
 
@@ -352,16 +352,25 @@ const CalendarPage = (props = {}) => {
     // find data
     const queries = (props.page.get('data.models') || []).map((mod) => getQuery(mod));
 
-    // find
-    Promise.all(queries.map(async (query) => {
-      // return query
-      return query?.listen ? await query.listen() : [];
-    })).then(setSets);
-
     // on update
     const onUpdate = () => {
       setUpdated(new Date());
     };
+
+    // set data
+    let data = null;
+
+    // find
+    Promise.all(queries.map(async (query) => {
+      // return query
+      const loaded = query?.listen ? await query.listen() : [];
+
+      // on updated
+      if (loaded?.on) loaded.on('update', onUpdate);
+
+      // loaded
+      return loaded;
+    })).then(setSets);
 
     // add listener
     props.page.on('user.search', onUpdate);
@@ -376,6 +385,12 @@ const CalendarPage = (props = {}) => {
       props.page.removeListener('data.models', onUpdate);
       props.page.removeListener('user.filter.me', onUpdate);
       props.page.removeListener('user.filter.tags', onUpdate);
+
+      // check data
+      if (data && data.removeListener) {
+        data.deafen();
+        data.removeListener('update', onUpdate);
+      }
     };
   }, [
     props.page.get('_id'),
@@ -398,7 +413,7 @@ const CalendarPage = (props = {}) => {
         user={ modalModel.user }
         onHide={ (e) => props.setItem(null) }
         setItem={ props.setItem }
-        getForms={ () => [modalModel.form].map((f) => props.dashup.page(f)).filter((f) => f) }
+        getForms={ () => [modalModel.form].map((f) => f && props.dashup.page(f)).filter((f) => f) }
         getField={ (id) => {
           // return
           if (!modalModel.form) return;
@@ -446,30 +461,46 @@ const CalendarPage = (props = {}) => {
         </div>
 
         { props.dashup.can(props.page, 'submit') && !!getForms().length && (
-          <Dropdown>
-            <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
-              <i className="fat fa-plus me-2" />
-              Create
-            </Dropdown.Toggle>
+          getForms().length > 1 ? (
+            <Dropdown>
+              <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
+                <i className="fat fa-plus me-2" />
+                Create
+              </Dropdown.Toggle>
 
-            <Dropdown.Menu>
-              { getForms().map((form, i) => {
-                // return jsx
-                return (
-                  <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => {
-                    // set model/form
-                    setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
+              <Dropdown.Menu>
+                { getForms().map((form, i) => {
+                  // return jsx
+                  return (
+                    <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => {
+                      // set model/form
+                      setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
 
-                    // set item
-                    props.setItem(new props.dashup.Model());
-                  } }>
-                    <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
-                    { form.get('name') }
-                  </Dropdown.Item>
-                );
-              }) }
-            </Dropdown.Menu>
-          </Dropdown>
+                      // set item
+                      props.setItem(new props.dashup.Model({}, props.dashup));
+                    } }>
+                      <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
+                      { form.get('name') }
+                    </Dropdown.Item>
+                  );
+                }) }
+              </Dropdown.Menu>
+            </Dropdown>
+          ) : (
+            <button className="btn btn-primary me-2" onClick={ (e) => {
+              // get form
+              const form = getForms()[0];
+              
+              // set model/form
+              setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
+
+              // set item
+              props.setItem(new props.dashup.Model({}, props.dashup));
+            } }>
+              <i className={ `me-2 fa-${getForms()[0].get('icon') || 'pencil fas'}` } />
+              { getForms()[0].get('name') }
+            </button>
+          )
         ) }
         
       </Page.Menu>

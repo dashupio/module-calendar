@@ -15,7 +15,7 @@ const PageCalendarConfig = (props = {}) => {
     // get forms
     const models = Array.from(props.dashup.get('pages').values()).filter((page) => {
       // return model pages
-      return page.get('type') === 'model';
+      return page.get('type') === 'model' && !page.get('archived');
     });
 
     // return mapped
@@ -35,7 +35,7 @@ const PageCalendarConfig = (props = {}) => {
     // get forms
     const forms = Array.from(props.dashup.get('pages').values()).filter((page) => {
       // return model pages
-      return page.get('type') === 'form' && page.get('data.model') === model.model;
+      return page.get('type') === 'form' && page.get('data.model') === model.model && !page.get('archived');
     });
 
     // return mapped
@@ -55,7 +55,7 @@ const PageCalendarConfig = (props = {}) => {
     // get forms
     const forms = Array.from(props.dashup.get('pages').values()).filter((page) => {
       // return model pages
-      return page.get('type') === 'form' && page.get('data.model') === model.model;
+      return page.get('type') === 'form' && page.get('data.model') === model.model && !page.get('archived');
     });
 
     // get field
@@ -224,7 +224,7 @@ const PageCalendarConfig = (props = {}) => {
           </div>
         );
       }) }
-      <div>
+      <div className="text-end">
         <button className="btn btn-success" onClick={ (e) => onCreate(e) }>
           Add Model
         </button>
