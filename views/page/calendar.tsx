@@ -23,10 +23,11 @@ const localizer = BigCalendar.momentLocalizer(moment);
 const CalendarPage = (props = {}) => {
   // views
   const views = {
-    'day'    : 'Day',
-    'week'   : 'Week',
-    'month'  : 'Month',
-    'agenda' : 'Agenda',
+    'day'       : 'Day',
+    'week'      : 'Week',
+    'month'     : 'Month',
+    'agenda'    : 'Agenda',
+    'work_week' : 'Work Week',
   };
 
   // required
@@ -94,7 +95,7 @@ const CalendarPage = (props = {}) => {
       // week
       endDate = moment(date).endOf('month').toDate();
       startDate = moment(date).startOf('month').toDate();
-    } else if (view === 'week') {
+    } else if (['week', 'work_week'].includes(view)) {
       // week
       endDate = moment(date).endOf('week').toDate();
       startDate = moment(date).startOf('week').toDate();
@@ -106,24 +107,31 @@ const CalendarPage = (props = {}) => {
 
     // add where
     query = query.or({
+      // range included in date
       [`${dateField.name || dateField.uuid}.end`] : {
-        $lt : endDate,
+        $ne : null,
+        $gt : startDate,
       },
       [`${dateField.name || dateField.uuid}.start`] : {
+        $lt : endDate,
+      },
+    }, {
+      // single date included in date
+      [`${dateField.name || dateField.uuid}.end`]   : null,
+      [`${dateField.name || dateField.uuid}.start`] : {
+        $lt : endDate,
         $gt : startDate,
       },
     }, {
-      [`${dateField.name || dateField.uuid}.repeat`] : null,
-      [`${dateField.name || dateField.uuid}.start`] : {
-        $lt : endDate,
-      },
-    }, {
+      // repeated forever
       [`${dateField.name || dateField.uuid}.repeat.ends`] : 'forever',
       [`${dateField.name || dateField.uuid}.start`]    : {
         $lt : endDate,
       },
     }, {
+      // repeated until
       [`${dateField.name || dateField.uuid}.repeat.until`] : {
+        $ne : null,
         $gt : startDate,
       },
       [`${dateField.name || dateField.uuid}.start`] : {
@@ -162,7 +170,7 @@ const CalendarPage = (props = {}) => {
         // week
         endDate = moment(date).endOf('month').toDate();
         startDate = moment(date).startOf('month').toDate();
-      } else if (view === 'week') {
+      } else if (['week', 'work_week'].includes(view)) {
         // week
         endDate = moment(date).endOf('week').toDate();
         startDate = moment(date).startOf('week').toDate();
@@ -204,6 +212,7 @@ const CalendarPage = (props = {}) => {
                 end     : subRange.end.toDate(),
                 field   : dateField,
                 start   : subRange.start.toDate(),
+                allDay  : dateField.date === 'date',
                 repeat  : item.get(`${dateField.name || dateField.uuid}.repeat`),
                 display : model.display,
               });
@@ -217,6 +226,7 @@ const CalendarPage = (props = {}) => {
           subAccum.push({
             id      : item.get('_id'),
             field   : dateField,
+            allDay  : dateField.date === 'date',
             display : model.display,
             end,
             item,
@@ -283,7 +293,7 @@ const CalendarPage = (props = {}) => {
       // add one month
       return setDate(moment(date).subtract(1, 'month').toDate());
     }
-    if (view === 'week') {
+    if (['week', 'work_week'].includes(view)) {
       // add one month
       return setDate(moment(date).subtract(1, 'week').toDate());
     }
@@ -304,7 +314,7 @@ const CalendarPage = (props = {}) => {
       // add one month
       return setDate(moment(date).add(1, 'month').toDate());
     }
-    if (view === 'week') {
+    if (['week', 'work_week'].includes(view)) {
       // add one month
       return setDate(moment(date).add(1, 'week').toDate());
     }
@@ -369,7 +379,7 @@ const CalendarPage = (props = {}) => {
       if (loaded?.on) loaded.on('update', onUpdate);
 
       // loaded
-      return loaded;
+      return loaded; 
     })).then((sets) => setSets(sets.filter((s) => s)));
 
     // add listener
@@ -393,12 +403,12 @@ const CalendarPage = (props = {}) => {
       }
     };
   }, [
-    props.page.get('_id'),
+    date,
     props.page.get('type'),
     props.page.get('user.search'),
     props.page.get('user.filter.me'),
     props.page.get('user.filter.tags'),
-    ...(props.page.get('data.models') || []),
+    JSON.stringify(props.page.get('data.models') || []),
   ]);
 
   // return jsx
@@ -510,6 +520,7 @@ const CalendarPage = (props = {}) => {
           <Calendar
             view={ view }
             onView={ () => {} }
+            views={ Object.keys(views) }
 
             date={ date }
             onNavigate={ () => {} }
@@ -538,7 +549,11 @@ const CalendarPage = (props = {}) => {
                   <OverlayTrigger
                     overlay={
                       <Tooltip>
-                        { moment(subProps.event.start).format('hh:mm a') } - { moment(subProps.event.end).format('hh:mm a') }
+                        { subProps.event.allDay ? (
+                          moment(subProps.event.start).format('MMM DD YYYY')
+                        ) : (
+                          `${moment(subProps.event.start).format('hh:mm a')} - ${moment(subProps.event.end).format('hh:mm a')}`
+                        ) }
                       </Tooltip>
                     }
                     placement="top"
