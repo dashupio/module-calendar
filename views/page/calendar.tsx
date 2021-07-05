@@ -370,7 +370,7 @@ const CalendarPage = (props = {}) => {
 
       // loaded
       return loaded;
-    })).then(setSets);
+    })).then((sets) => setSets(sets.filter((s) => s)));
 
     // add listener
     props.page.on('user.search', onUpdate);
