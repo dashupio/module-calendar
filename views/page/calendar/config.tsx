@@ -1,14 +1,18 @@
 
 // import react
-import React from 'react';
 import shortid from 'shortid';
 import { Dropdown } from 'react-bootstrap';
-import { View, Query, Select } from '@dashup/ui';
+import React, { useState } from 'react';
+import { View, Color, Query, Select } from '@dashup/ui';
+
+// colors
+import colors from '../colors';
 
 // calendar page config
 const PageCalendarConfig = (props = {}) => {
-  // colors
-  const colors = ['white', 'primary', 'secondary', 'success', 'info', 'warning', 'danger'];
+  // state
+  const [color, setColor] = useState(null);
+  const [model, setAModel] = useState(null);
 
   // get dashboards
   const getModel = (model) => {
@@ -123,20 +127,11 @@ const PageCalendarConfig = (props = {}) => {
                       <label className="d-block form-label">
                         Color
                       </label>
-                      <Dropdown>
-                        <Dropdown.Toggle variant={ model.color || 'white' } className="btn-picker">
-                          &nbsp;
-                        </Dropdown.Toggle>
-
-                        <Dropdown.Menu className="p-3">
-                          { colors.map((color, i) => {
-                            // return jsx
-                            return (
-                              <button key={ `color-${color}` } className={ `btn-picker bg-${color} me-2` } onClick={ (e) => setModel(model, 'color', color) } />
-                            );
-                          }) }
-                        </Dropdown.Menu>
-                      </Dropdown>
+                      <button className="btn btn-picker" onClick={ (e) => !setColor(e.target) && setAModel(model) } style={ {
+                        background : colors[model.color] || model.color?.hex || model.color || null,
+                      } }>
+                        &nbsp;
+                      </button>
                     </div>
                   </div>
                   <div className="flex-1">
@@ -229,6 +224,8 @@ const PageCalendarConfig = (props = {}) => {
           Add Model
         </button>
       </div>
+
+      { !!color && !!model && <Color show target={ color } color={ colors[model.color || 'primary'] || model.color?.hex } colors={ Object.values(colors) } onChange={ (c) => setModel(model, 'color', c) } onHide={ () => !setColor(null) && setAModel(null) } /> }
     </>
   );
 };

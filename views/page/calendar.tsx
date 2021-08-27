@@ -37,6 +37,9 @@ const CalendarPage = (props = {}) => {
   }, {
     key   : 'data.models.0.form',
     label : 'Form',
+  }, {
+    key   : 'data.models.0.date',
+    label : 'Date Field',
   }];
 
   // state
@@ -542,6 +545,7 @@ const CalendarPage = (props = {}) => {
             components={ {
               event : (subProps = {}) => {
                 // repeat
+                const hsl = subProps.event?.model?.color?.hsl;
                 const repeat = subProps.event.repeat;
 
                 // return event
@@ -584,7 +588,7 @@ const CalendarPage = (props = {}) => {
                           // get field
                           return props.getField(id, fields);
                         } }
-                        background={ `bg-${subProps.event?.model?.color || ''}-transparent` }
+                        background={ hsl ? `hsla(${hsl.h},${(hsl.s * 100)}%,${(hsl.l * 100)}%,0.1)` : null }
                         repeat={ !!repeat && (
                           <Tooltip>
                             Repeats every { repeat?.amount > 1 ? `${repeat.amount.toLocaleString()} ${repeat.period || 'day'}s` : (repeat.period || 'day') }

@@ -20,7 +20,7 @@ export default class CalendarPage extends Struct {
    */
   get icon() {
     // return page type label
-    return 'fa fa-calendar-week';
+    return 'fad fa-calendar-week text-info';
   }
 
   /**
@@ -28,7 +28,7 @@ export default class CalendarPage extends Struct {
    */
   get title() {
     // return page type label
-    return 'Calendar Page';
+    return 'Calendar';
   }
 
   /**
@@ -63,6 +63,6 @@ export default class CalendarPage extends Struct {
    */
   get description() {
     // return description string
-    return 'Calendar view page';
+    return 'Calendar view with customizable displays';
   }
 }
