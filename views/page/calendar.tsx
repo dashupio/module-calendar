@@ -543,20 +543,20 @@ const CalendarPage = (props = {}) => {
             } }
 
             components={ {
-              event : (subProps = {}) => {
+              event : ({ event }) => {
                 // repeat
-                const hsl = subProps.event?.model?.color?.hsl;
-                const repeat = subProps.event.repeat;
+                const hsl = event.model?.color?.hsl;
+                const repeat = event.repeat;
 
                 // return event
                 return (
                   <OverlayTrigger
                     overlay={
                       <Tooltip>
-                        { subProps.event.allDay ? (
-                          moment(subProps.event.start).format('MMM DD YYYY')
+                        { event.allDay ? (
+                          moment(event.start).format('MMM DD YYYY')
                         ) : (
-                          `${moment(subProps.event.start).format('hh:mm a')} - ${moment(subProps.event.end).format('hh:mm a')}`
+                          `${moment(event.start).format('hh:mm a')} - ${moment(event.end).format('hh:mm a')}`
                         ) }
                       </Tooltip>
                     }
@@ -564,25 +564,25 @@ const CalendarPage = (props = {}) => {
                   >
                     <div className="h-100 w-100">
                       <Card
-                        key={ `schedule-item-${subProps.event.item.get('_id')}` }
-                        tag={ subProps.event?.model?.tag }
-                        user={ subProps.event?.model?.user }
+                        key={ `schedule-item-${event.item.get('_id')}` }
+                        tag={ event?.model?.tag }
+                        user={ event?.model?.user }
                         size="sm"
-                        item={ subProps.event.item }
+                        item={ event.item }
                         page={ props.page }
                         group={ 'calendar' }
                         dashup={ props.dashup }
                         onClick={ () => {
-                          setModalModel(subProps.event?.model);
-                          props.setItem(subProps.event.item);
+                          setModalModel(event?.model);
+                          props.setItem(event.item);
                         } }
-                        template={ subProps.event.display }
+                        template={ event.display }
                         getField={ (id) => {
                           // return
-                          if (!subProps.event?.model?.model) return;
+                          if (!event?.model?.model) return;
 
                           // get model
-                          const forms = props.getForms([subProps.event.model.model]);
+                          const forms = props.getForms([event.model.model]);
                           const fields = props.getFields(forms);
 
                           // get field
