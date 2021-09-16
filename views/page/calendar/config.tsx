@@ -14,6 +14,31 @@ const PageCalendarConfig = (props = {}) => {
   const [color, setColor] = useState(null);
   const [model, setAModel] = useState(null);
 
+  // views
+  const views = {
+    'day'       : 'Day',
+    'week'      : 'Week',
+    'month'     : 'Month',
+    'agenda'    : 'Agenda',
+    'work_week' : 'Work Week',
+  };
+
+  /**
+   * get view
+   */
+  const getView = () => {
+    // views
+    return Object.keys(views).map((type) => {
+      // return object
+      return {
+        value : type,
+        label : views[type],
+
+        selected : props.page.get('data.view') === type,
+      };
+    });
+  };
+
   // get dashboards
   const getModel = (model) => {
     // get forms
@@ -106,6 +131,12 @@ const PageCalendarConfig = (props = {}) => {
   // return jsx
   return (
     <>
+      <div className="mb-3">
+        <label className="form-label">
+          Default View
+        </label>
+        <Select options={ getView() } defaultValue={ getView().filter((f) => f.selected) } onChange={ (val) => props.setData('view', val?.value) } isClearable />
+      </div>
       { (props.page.get('data.models') || []).map((model, i) => {
         // return jsx
         return (

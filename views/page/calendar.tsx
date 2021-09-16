@@ -42,9 +42,12 @@ const CalendarPage = (props = {}) => {
     label : 'Date Field',
   }];
 
+  // selected view
+  const selectedView = props.page.get('user.view') || props.page.get('data.view') || 'month';
+
   // state
   const [date, setDate] = useState(new Date());
-  const [view, setView] = useState(props.page.get('data.view') && views[props.page.get('data.view')] ? props.page.get('data.view') : 'month');
+  const [view, setView] = useState(views[selectedView] ? selectedView : 'month');
   const [sets, setSets] = useState([]);
   const [share, setShare] = useState(false);
   const [config, setConfig] = useState(false);
@@ -446,14 +449,14 @@ const CalendarPage = (props = {}) => {
         <Dropdown>
           <Dropdown.Toggle variant="light" id="dropdown-limit" className="me-2">
             View:
-            <b className="ms-1">{ views[props.page.get('data.view') || 'month'] }</b>
+            <b className="ms-1">{ views[view] }</b>
           </Dropdown.Toggle>
 
           <Dropdown.Menu>
             { Object.keys(views).map((key, i) => {
               // return jsx
               return (
-                <Dropdown.Item key={ `view-${key}` } onClick={ (e) => !setView(key) && props.setData('view', key) }>
+                <Dropdown.Item key={ `view-${key}` } onClick={ (e) => !setView(key) && props.setUser('view', key) }>
                   { views[key] }
                 </Dropdown.Item>
               );

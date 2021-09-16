@@ -4,9 +4,9 @@ $out-of-range-color: var(--bs-dark-transparent);
 $out-of-range-bg-color: var(--bs-light-transparent);
 
 $calendar-border: transparent;
-$cell-border: var(--bs-secondary-transparent);
+$cell-border: rgba(0, 0, 0, 0.2);
 
-$border-color: var(--bs-secondary-transparent);
+$border-color: rgba(0, 0, 0, 0.2);
 
 $segment-width: percentage(1 / 7) !default;
 
