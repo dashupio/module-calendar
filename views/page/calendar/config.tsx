@@ -1,7 +1,6 @@
 
 // import react
 import shortid from 'shortid';
-import { Dropdown } from 'react-bootstrap';
 import React, { useState } from 'react';
 import { View, Color, Query, Select } from '@dashup/ui';
 
