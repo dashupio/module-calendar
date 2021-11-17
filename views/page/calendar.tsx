@@ -3,8 +3,8 @@ import Moment from 'moment'
 import { extendMoment } from 'moment-range';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import * as BigCalendar from 'react-big-calendar';
-import React, { useState, useEffect } from 'react';
-import { Page, Card, Dropdown, OverlayTrigger, Tooltip } from '@dashup/ui';
+import React, { useRef, useState, useEffect } from 'react';
+import { Box, Page, Item, Menu, MenuItem, Tooltip, Button, IconButton, Icon } from '@dashup/ui';
 
 // calendar
 const Calendar = withDragAndDrop(BigCalendar.Calendar);
@@ -29,6 +29,9 @@ const CalendarPage = (props = {}) => {
     'work_week' : 'Work Week',
   };
 
+  // menu ref
+  const menuRef = useRef(null);
+
   // required
   const required = [{
     key   : 'data.models.0.model',
@@ -46,6 +49,7 @@ const CalendarPage = (props = {}) => {
 
   // state
   const [date, setDate] = useState(new Date());
+  const [open, setOpen] = useState(false);
   const [view, setView] = useState(views[selectedView] ? selectedView : 'month');
   const [sets, setSets] = useState([]);
   const [share, setShare] = useState(false);
@@ -75,7 +79,7 @@ const CalendarPage = (props = {}) => {
     if (!form || !model || !field) return null;
 
     // get model
-    const modelPage = props.dashup.page(model);
+    const modelPage = model && props.dashup.page(model);
 
     // check page
     if (!modelPage) return null;
@@ -420,153 +424,128 @@ const CalendarPage = (props = {}) => {
   return (
     <Page { ...props } loading={ loading } require={ required } bodyClass="flex-column">
 
-      { !!modalModel && !!props.item && <Page.Item
-        show
-        tag={ modalModel.tag }
-        item={ props.item }
-        form={ modalModel.form }
-        user={ modalModel.user }
-        onHide={ (e) => props.setItem(null) }
-        setItem={ props.setItem }
-        getForms={ () => [modalModel.form].map((f) => f && props.dashup.page(f)).filter((f) => f) }
-        getField={ (id) => {
-          // return
-          if (!modalModel.form) return;
+      { !!modalModel && !!props.item && (
+        <Page.Item
+          show
+          tag={ modalModel.tag }
+          item={ props.item }
+          form={ modalModel.form }
+          user={ modalModel.user }
+          onHide={ (e) => props.setItem(null) }
+          setItem={ props.setItem }
+          getForms={ () => [modalModel.form].map((f) => f && props.dashup.page(f)).filter((f) => f) }
+          getField={ (id) => {
+            // return
+            if (!modalModel.form) return;
 
-          // get model
-          const fields = props.getFields([modalModel.form]);
+            // get model
+            const fields = props.getFields([modalModel.form]);
 
-          // get field
-          return props.getField(id, fields);
-        } }
+            // get field
+            return props.getField(id, fields);
+          } }
         />
-      }
+      ) }
       <Page.Share show={ share } onHide={ (e) => setShare(false) } />
       <Page.Config show={ config } onHide={ (e) => setConfig(false) } />
 
       <Page.Menu onConfig={ () => setConfig(true) } presence={ props.presence } onShare={ () => setShare(true) }>
-        <Dropdown>
-          <Dropdown.Toggle variant="light" id="dropdown-limit" className="me-2">
-            View:
-            <b className="ms-1">{ views[view] }</b>
-          </Dropdown.Toggle>
 
-          <Dropdown.Menu>
-            { Object.keys(views).map((key, i) => {
-              // return jsx
-              return (
-                <Dropdown.Item key={ `view-${key}` } onClick={ (e) => !setView(key) && props.setUser('view', key) }>
-                  { views[key] }
-                </Dropdown.Item>
-              );
-            }) }
-          </Dropdown.Menu>
-        </Dropdown>
+        <Button ref={ menuRef } variant="contained" onClick={ () => setOpen(true) }>
+          View:
+          { ' ' }
+          <b>{ views[view] }</b>
+        </Button>
+        <Menu
+          open={ open }
+          onClose={ () => setOpen(false) }
+          anchorEl={ menuRef?.current }
+        >
+          { Object.keys(views).map((key, i) => {
+            // return jsx
+            return (
+              <MenuItem key={ `view-${key}` } onClick={ (e) => !setView(key) && props.setUser('view', key) }>
+                { views[key] }
+              </MenuItem>
+            );
+          }) }
+        </Menu>
 
-        <button className={ `btn me-1 btn-primary${isToday() ? ' disabled' : ''}` } onClick={ (e) => setDate(new Date()) }>
+        <Button color="primary" variant="contained" disabled={ !!isToday() } onClick={ (e) => setDate(new Date()) }>
           { isToday() ? 'Today' : moment(date).format('LL') }
-        </button>
-        <div className="btn-group me-2">
-          <button className="btn btn-primary" onClick={ (e) => onPrev(e) } data-toggle="tooltip" title="Previous">
-            <i className="fa fa-chevron-left" />
-          </button>
-          <button className="btn btn-primary" onClick={ (e) => onNext(e) } data-toggle="tooltip" title="Next">
-            <i className="fa fa-chevron-right" />
-          </button>
-        </div>
+        </Button>
+
+        <IconButton onClick={ (e) => onPrev(e) }>
+          <Icon type="fas" icon="chevron-left" />
+        </IconButton>
+        <IconButton onClick={ (e) => onNext(e) }>
+          <Icon type="fas" icon="chevron-right" />
+        </IconButton>
 
         { props.dashup.can(props.page, 'submit') && !!getForms().length && (
-          getForms().length > 1 ? (
-            <Dropdown>
-              <Dropdown.Toggle variant="primary" id="dropdown-create" className="me-2">
-                <i className="fat fa-plus me-2" />
-                Create
-              </Dropdown.Toggle>
+          <Button variant="contained" color="primary" startIcon={ (
+            <Icon type="fas" icon={ getForms()[0].get('icon') || 'plus' } />
+          ) } onClick={ (e) => {
+            // get form
+            const form = getForms()[0];
+            
+            // set model/form
+            form && setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
 
-              <Dropdown.Menu>
-                { getForms().map((form, i) => {
-                  // return jsx
-                  return (
-                    <Dropdown.Item key={ `create-${form.get('_id')}` } onClick={ (e) => {
-                      // set model/form
-                      setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
-
-                      // set item
-                      props.setItem(new props.dashup.Model({}, props.dashup));
-                    } }>
-                      <i className={ `me-2 fa-${form.get('icon') || 'pencil fas'}` } />
-                      { form.get('name') }
-                    </Dropdown.Item>
-                  );
-                }) }
-              </Dropdown.Menu>
-            </Dropdown>
-          ) : (
-            <button className="btn btn-primary me-2" onClick={ (e) => {
-              // get form
-              const form = getForms()[0];
-              
-              // set model/form
-              setModalModel(props.page.get('data.models').find((m) => m.form === form.get('_id')));
-
-              // set item
-              props.setItem(new props.dashup.Model({}, props.dashup));
-            } }>
-              <i className={ `me-2 fa-${getForms()[0].get('icon') || 'pencil fas'}` } />
-              { getForms()[0].get('name') }
-            </button>
-          )
+            // set item
+            props.setItem(new props.dashup.Model({}, props.dashup));
+          } }>
+            { getForms()[0].get('name') }
+          </Button>
         ) }
         
       </Page.Menu>
       <Page.Filter onSearch={ setSearch } getFields={ getFields } onTag={ setTag } tags={ getTags() } users={ getUsers() } />
       <Page.Body>
-        <div className="d-flex flex-1 fit-content">
-          <Calendar
-            view={ view }
-            onView={ () => {} }
-            views={ Object.keys(views) }
+        <Box position="relative" flex={ 1 }>
+          <Box position="absolute" top={ 0 } left={ 0 } right={ 0 } bottom={ 0 }>
+            <Calendar
+              view={ view }
+              onView={ () => {} }
+              views={ Object.keys(views) }
 
-            date={ date }
-            onNavigate={ () => {} }
-            onEventDrop={ ({ start, end, event }) => {
-              // set item
-              event.item.set(`${event.field.name || event.field.uuid}.end`, end);
-              event.item.set(`${event.field.name || event.field.uuid}.start`, start);
-              event.item.save();
-              setUpdated(new Date());
-            } }
-            onEventResize={ ({ start, end, event }) => {
-              // set item
-              event.item.set(`${event.field.name || event.field.uuid}.end`, end);
-              event.item.set(`${event.field.name || event.field.uuid}.start`, start);
-              event.item.save();
-              setUpdated(new Date());
-            } }
+              date={ date }
+              onNavigate={ () => {} }
+              onEventDrop={ ({ start, end, event }) => {
+                // set item
+                event.item.set(`${event.field.name || event.field.uuid}.end`, end);
+                event.item.set(`${event.field.name || event.field.uuid}.start`, start);
+                event.item.save();
+                setUpdated(new Date());
+              } }
+              onEventResize={ ({ start, end, event }) => {
+                // set item
+                event.item.set(`${event.field.name || event.field.uuid}.end`, end);
+                event.item.set(`${event.field.name || event.field.uuid}.start`, start);
+                event.item.save();
+                setUpdated(new Date());
+              } }
 
-            components={ {
-              event : ({ event }) => {
-                // repeat
-                const hsl = event.model?.color?.hsl;
-                const repeat = event.repeat;
+              components={ {
+                event : ({ event }) => {
+                  // repeat
+                  const hsl = event.model?.color?.hsl;
+                  const repeat = event.repeat;
 
-                // return event
-                return (
-                  <OverlayTrigger
-                    overlay={
-                      <Tooltip>
-                        { event.allDay ? (
-                          moment(event.start).format('MMM DD YYYY')
-                        ) : (
-                          `${moment(event.start).format('hh:mm a')} - ${moment(event.end).format('hh:mm a')}`
-                        ) }
-                      </Tooltip>
-                    }
-                    placement="top"
-                  >
-                    <div className="h-100 w-100">
-                      <Card
-                        key={ `schedule-item-${event.item.get('_id')}` }
+                  // return event
+                  return (
+                    <Tooltip title={ (
+                      event.allDay ? (
+                        moment(event.start).format('MMM DD YYYY')
+                      ) : (
+                        `${moment(event.start).format('hh:mm a')} - ${moment(event.end).format('hh:mm a')}`
+                      )
+                    ) } key={ `schedule-item-${event.item.get('_id')}` }>
+                      <Item
+                        sx={ {
+                          width  : '100%',
+                          height : '100%',
+                        } }
                         tag={ event?.model?.tag }
                         user={ event?.model?.user }
                         size="sm"
@@ -592,24 +571,24 @@ const CalendarPage = (props = {}) => {
                         } }
                         background={ hsl ? `hsla(${hsl.h},${(hsl.s * 100)}%,${(hsl.l * 100)}%,0.1)` : null }
                         repeat={ !!repeat && (
-                          <Tooltip>
+                          <>
                             Repeats every { repeat?.amount > 1 ? `${repeat.amount.toLocaleString()} ${repeat.period || 'day'}s` : (repeat.period || 'day') }
                             { repeat?.ends && repeat.until === 'until' ? ` until ${moment(repeat.until).format('LL')}` : '' }
-                          </Tooltip>
+                          </>
                         ) }
                       />
-                    </div>
-                  </OverlayTrigger>
-                );
-              },
-            } }
+                    </Tooltip>
+                  );
+                },
+              } }
 
-            events={ getItems() }
-            localizer={ localizer }
-            endAccessor="end"
-            startAccessor="start"
-          />
-        </div>
+              events={ getItems() }
+              localizer={ localizer }
+              endAccessor="end"
+              startAccessor="start"
+            />
+          </Box>
+        </Box>
       </Page.Body>
     </Page>
   );

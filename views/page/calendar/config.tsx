@@ -2,16 +2,26 @@
 // import react
 import shortid from 'shortid';
 import React, { useState } from 'react';
-import { View, Color, Query, Select } from '@dashup/ui';
+import { Box, useTheme, View, Color, colors, Query, TextField, MenuItem, Card, CardContent, CardHeader, Divider, IconButton, Icon, Stack, Button } from '@dashup/ui';
 
-// colors
-import colors from '../colors';
+// timeout
+let timeout;
+
+// debounce
+const debounce = (fn, to = 200) => {
+  clearTimeout(timeout);
+  timeout = setTimeout(fn, to);
+};
 
 // calendar page config
 const PageCalendarConfig = (props = {}) => {
+  // theme
+  const theme = useTheme();
+
   // state
   const [color, setColor] = useState(null);
   const [model, setAModel] = useState(null);
+  const [updated, setUpdated] = useState(new Date());
 
   // views
   const views = {
@@ -123,139 +133,193 @@ const PageCalendarConfig = (props = {}) => {
     // set value
     model[key] = value;
 
+    // set updated
+    setUpdated(new Date());
+
     // props
-    props.setData('models', [...(props.page.get('data.models') || [])], prev);
+    debounce(() => props.setData('models', [...(props.page.get('data.models') || [])], prev));
   };
 
   // return jsx
   return (
     <>
-      <div className="mb-3">
-        <label className="form-label">
-          Default View
-        </label>
-        <Select options={ getView() } defaultValue={ getView().filter((f) => f.selected) } onChange={ (val) => props.setData('view', val?.value) } isClearable />
-      </div>
+      <TextField
+        label="Default View"
+        value={ props.page.get('data.view') }
+        select
+        onChange={ (e) => props.setData('view', e.target.value) }
+        fullWidth
+      >
+        { getView().map((option) => (
+          <MenuItem key={ option.value } value={ option.value }>
+            { option.label }
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <Box my={ 2 }>
+        <Divider />
+      </Box>
+      
       { (props.page.get('data.models') || []).map((model, i) => {
         // return jsx
         return (
-          <div key={ `model-${model.uuid}` } className="card mb-3">
-            <div className="card-header d-flex align-items-center">
-              <b>
-                { `Model #${i}` }
-              </b>
-              <button className="ms-auto btn btn-danger" onClick={ (e) => onRemove(i) }>
-                <i className="fa fa-times" />
-              </button>
-            </div>
-            <div className="card-body">
-
-              <div className="mb-3">
-                <div className="d-flex flex-row">
-                  <div className="flex-0 me-3">
-                    <div className="mb-3">
-                      <label className="d-block form-label">
-                        Color
-                      </label>
-                      <button className="btn btn-picker" onClick={ (e) => !setColor(e.target) && setAModel(model) } style={ {
-                        background : colors[model.color] || model.color?.hex || model.color || null,
-                      } }>
-                        &nbsp;
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className="form-label">
-                      Calendar Model
-                    </label>
-                    <Select options={ getModel(model) } defaultValue={ getModel(model).filter((f) => f.selected) } onChange={ (val) => setModel(model, 'model', val?.value) } isClearable />
-                  </div>
-                </div>
-              </div>
-              
-              { !!model.model && (
-                <div className="mb-3">
-                  <label className="form-label">
-                    Calendar Form
-                  </label>
-                  <Select options={ getForm(model) } defaultValue={ getForm(model).filter((f) => f.selected) } onChange={ (val) => setModel(model, 'form', val?.value) } isClearable />
-                </div>
-              ) }
-
-              { !!model.form && (
+          <Card key={ `model-${model.uuid}` } sx={ {
+            mb : 2,
+          } } variant="outlined">
+            <CardHeader
+              title={ model.name || `Model #${i}` }
+              action={ (
                 <>
-                  <hr />
-                  
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Date Field
-                    </label>
-                    <Select options={ getField(model, 'date', ['date']) } defaultValue={ getField(model, 'date', ['date']).filter((f) => f.selected) } onChange={ (val) => setModel(model, 'date', val?.value) } isClearable />
-                  </div>
-                    
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Tag Field(s)
-                    </label>
-                    <Select options={ getField(model, 'tag', ['select', 'checkbox']) } defaultValue={ getField(model, 'tag', ['select', 'checkbox']).filter((f) => f.selected) } onChange={ (val) => setModel(model, 'tag', val.map((v) => v?.value)) } isClearable isMulti />
-                    <small>
-                      Selecting a tag field will allow you to tag tasks.
-                    </small>
-                  </div>
-                    
-                  <div className="mb-3">
-                    <label className="form-label">
-                      User Field(s)
-                    </label>
-                    <Select options={ getField(model, 'user', ['user']) } defaultValue={ getField(model, 'user', ['user']).filter((f) => f.selected) } onChange={ (val) => setModel(model, 'user', val.map((v) => v?.value)) } isClearable isMulti />
-                    <small>
-                      Selecting a user field will allow you to assign tasks to that user.
-                    </small>
-                  </div>
-  
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Item Title
-                    </label>
+                  <IconButton onClick={ (e) => setModel(model, 'open', !model.open) }>
+                    <Icon type="fas" icon={ model.open ? 'times' : 'pencil' } />
+                  </IconButton>
+                  <IconButton onClick={ (e) => onRemove(i) } color="error">
+                    <Icon type="fas" icon="trash" />
+                  </IconButton>
+                </>
+              ) }
+            />
+            { !!model.open && (
+              <CardContent>
+                <Stack direction="row" spacing={ 2 } sx={ {
+                  mb : 2,
+                } }>
+                  <Button variant="contained" onClick={ (e) => !setAModel(model) && setColor(e.target) } sx={ {
+                    color           : model.color?.hex && theme.palette.getContrastText(model.color?.hex),
+                    backgroundColor : model.color?.hex,
+                  } }>
+                    <Icon type="fas" icon="tint" fixedWidth />
+                  </Button>
+                  <TextField
+                    label="Name"
+                    onChange={ (e) => setModel(model, 'name', e.target.value) }
+                    defaultValue={ model.name }
+                    fullWidth
+                  />
+                </Stack>
+                <TextField
+                  label="Calendar Model"
+                  value={ model.model }
+                  select
+                  onChange={ (e) => setModel(model, 'model', e.target.value) }
+                  fullWidth
+                >
+                  { getModel(model).map((option) => (
+                    <MenuItem key={ option.value } value={ option.value }>
+                      { option.label }
+                    </MenuItem>
+                  )) }
+                </TextField>
+                <TextField
+                  label="Calendar Form"
+                  value={ model.form }
+                  select
+                  onChange={ (e) => setModel(model, 'form', e.target.value) }
+                  fullWidth
+                >
+                  { getForm(model).map((option) => (
+                    <MenuItem key={ option.value } value={ option.value }>
+                      { option.label }
+                    </MenuItem>
+                  )) }
+                </TextField>
+                { !!model.form && (
+                  <>
+                    <TextField
+                      label="Date Field"
+                      value={ model.date }
+                      select
+                      onChange={ (e) => setModel(model, 'date', e.target.value) }
+                      fullWidth
+                    >
+                      { getField(model, 'date', ['date']).map((option) => (
+                        <MenuItem key={ option.value } value={ option.value }>
+                          { option.label }
+                        </MenuItem>
+                      )) }
+                    </TextField>
+
+                    <TextField
+                      label="Tag Field(s)"
+                      value={ Array.isArray(model.tag) ? model.tag : [model.tag].filter((t) => t) }
+                      select
+                      onChange={ (e) => setModel(model, 'tag', e.target.value) }
+                      fullWidth
+                      helperText="Selecting a tag field will allow you to tag tasks."
+
+                      SelectProps={ {
+                        multiple : true,
+                      } }
+                    >
+                      { getField(model, 'tag', ['select', 'checkbox']).map((option) => (
+                        <MenuItem key={ option.value } value={ option.value }>
+                          { option.label }
+                        </MenuItem>
+                      )) }
+                    </TextField>
+
+                    <TextField
+                      label="User Field(s)"
+                      value={ Array.isArray(model.user) ? model.user : [model.user].filter((u) => u) }
+                      select
+                      onChange={ (e) => setModel(model, 'user', e.target.value) }
+                      fullWidth
+                      helperText="Selecting a user field will allow you to assign tasks to that user."
+
+                      SelectProps={ {
+                        multiple : true,
+                      } }
+                    >
+                      { getField(model, 'user', ['user']).map((option) => (
+                        <MenuItem key={ option.value } value={ option.value }>
+                          { option.label }
+                        </MenuItem>
+                      )) }
+                    </TextField>
+
                     <View
                       type="field"
-                      view="code"
+                      view="input"
                       mode="handlebars"
                       struct="code"
+                      field={ {
+                        label : 'Item Title',
+                      } }
                       value={ model.display }
                       dashup={ props.dashup }
-                      onChange={ (val) => setModel(model, 'display', val) }
-                      />
-                  </div>
-                    
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Filter By
-                    </label>
+                      onChange={ (field, val) => debounce(() => setModel(model, 'display', val) ) }
+                    />
+
+                    <Box my={ 2 }>
+                      <Divider />
+                    </Box>
+
                     <Query
                       isString
 
                       page={ props.page }
+                      label="Filter By"
                       query={ model.filter }
                       dashup={ props.dashup }
                       fields={ props.getFields([model.form]) }
                       onChange={ (val) => setModel(model, 'filter', val) }
                       getFieldStruct={ props.getFieldStruct }
-                      />
-                  </div>
-                </>
-              ) }
-            </div>
-          </div>
+                    />
+                  </>
+                ) }
+              </CardContent>
+            ) }
+          </Card>
         );
       }) }
-      <div className="text-end">
-        <button className="btn btn-success" onClick={ (e) => onCreate(e) }>
+      <Box display="flex" justifyContent="flex-end">
+        <Button color="success" variant="contained" onClick={ (e) => onCreate() }>
           Add Model
-        </button>
-      </div>
+        </Button>
+      </Box>
 
-      { !!color && !!model && <Color show target={ color } color={ colors[model.color || 'primary'] || model.color?.hex } colors={ Object.values(colors) } onChange={ (c) => setModel(model, 'color', c) } onHide={ () => !setColor(null) && setAModel(null) } /> }
+      { !!color && !!model && <Color show target={ color } color={ model.color?.hex } colors={ Object.values(colors) } onChange={ (c) => setModel(model, 'color', c) } onClose={ () => !setColor(null) && setAModel(null) } /> }
     </>
   );
 };
